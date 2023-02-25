@@ -8,6 +8,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "aes-cmac": "^2.0.0",
     "body-parser": "^1.20.1",
     "buffered-reader": "^1.0.1",
     "child_process": "^1.0.2",
