@@ -1,3 +1,4 @@
+var os = require('os');
 var express = require('express');
 var router = express.Router();
 var mime = require('mime');
@@ -8,12 +9,17 @@ var fs = require('fs');
 const bodyParser = require("body-parser");
 const sqlite3 = require('sqlite3').verbose();
 const {exec} = require("child_process");
+const form = formidable({uploadDir: os.tmpdir()});
 var app = require('../app');
+
+const DbLogPath = process.env.HOME + '/Public/MAC_Prov_Extract/var/log';
+const DbDirPath = process.env.HOME + '/Public/MAC_Prov_Extract/var/lib';
+const DbFilePath = DbDirPath + '/keystore.db';
 
 // Instanciate keystore DB
 var keystoredb =
     new sqlite3.Database(
-        '/home/rcoscali/Public/MAC_Prov_Extract/var/lib/keystore.db',
+        DbFilePath,
         sqlite3.OPEN_READWRITE | sqlite3.OPEN_FULLMUTEX | sqlite3.OPEN_PRIVATECACHE,
         (err) =>
         {
@@ -22,16 +28,28 @@ var keystoredb =
                 console.error(err.message);
                 process.exit(1);
             }
-            else {
+            else
+	    {
                 console.log('****** Keys DB openned !');
 
                 var app = express();
 
 		/* GET home page. */
-		router.get('/', function(req, res, next) {
-		    res.render('index', { title: 'MAC Prov Tool' });
-		});
-
+		router.get(
+		    '/',
+		    function(req, res, next)
+		    {
+			res.render(
+			    'index',
+			    {
+				title: 'MAC Prov Tool',
+				help: '',
+				accordionTab: 0
+			    }
+			);
+		    }
+		);
+		
 		/*
 		 * Log Files functions
 		 */
@@ -45,6 +63,91 @@ var keystoredb =
 				   accordionTab: 0
 			       });
 		});
+
+		/* POST upload_log_file */
+		router.post('/upload_log_file',
+			    async (req, res, next) =>
+			    {
+				var releve, result;
+				try
+				{
+				    form.parse(req, (err, fields, files) =>
+					{
+					    if (err)
+					    {
+						next(err);
+						return;
+					    }
+					    req.fields = fields;
+					    req.files = files;
+					    
+					    var log_file = req.files.log_file;
+					    console.log("Uploaded '" + log_file.originalFilename + "' file to: " + log_file.filepath);
+					    fs.readFile(
+						log_file.filepath,
+						'utf8',
+						(err, data) =>
+						{
+						    // First let's write file in DB repository
+						    var targetFilePath = DbLogPath + "/" + log_file.originalFilename;
+						    console.log("Target file path: " + targetFilePath);
+						    var newTargetFilePath = targetFilePath;
+						    var fileCntr = 0;
+						    var extension = path.extname(newTargetFilePath);
+						    var name = path.basename(newTargetFilePath, extension);
+						    while (fs.existsSync(newTargetFilePath))
+						    {
+							console.log("Target file path exists: " + newTargetFilePath);
+							fileCntr++;
+							newTargetFilePath =  DbLogPath + "/" + name + '_' + fileCntr + extension;
+						    }
+						    console.log("Found free target file path : " + newTargetFilePath);
+						    fs.rename(
+							log_file.filepath,
+							newTargetFilePath,
+							function (err)
+							{
+							    if (err)
+							    {
+								console.log("Couldn't rename file " + log_file.filepath + " !");
+								next(err);
+								return;
+							    }
+							    console.log('File Renamed to ' + newTargetFilePath + '!');
+							    keystoredb.run("INSERT INTO LogFiles (Name, Date, Size, Content) \
+                                                                                   VALUES        (   ?,    ?,    ?,       ?);",
+									   [path.basename(newTargetFilePath),
+									    (new Date()).toString(),
+									    log_file.size,
+									    data],
+									   (err) =>
+									   {
+									       if (err)
+									       {
+										   console.log("Error while adding log file record in DB!");
+										   next(err);
+										   return;
+									       }
+									   }
+									  );
+							    res.render('upload_log_files',
+								       {
+									   title: 'Upload a log file',
+									   help: '',
+									   content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
+									   accordionTab: 0
+								       });
+							}
+						    );
+						}
+					    );
+					}
+				    );
+				} catch(err) {
+				    next(err);
+				}
+			    });
+		
 		
 		/* GET list_log_file. */
 		router.get('/list_log_file', function(req, res, next) {
