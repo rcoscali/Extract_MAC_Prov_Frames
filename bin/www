@@ -4,6 +4,7 @@
  * Module dependencies.
  */
 
+var os = require('os');
 var app = require('../app');
 var debug = require('debug')('mac-prov-extract:server');
 var http = require('http');
