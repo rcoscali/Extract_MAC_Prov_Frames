@@ -1,6 +1,8 @@
 body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  color: #fff;
+  background:#333 url("images/ui-bg_inset-soft_25_000000_1x100.png") 50% bottom repeat-x;
 }
 
 a {

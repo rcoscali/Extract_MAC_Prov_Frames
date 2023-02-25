@@ -14,72 +14,74 @@ html(lang="fr")
       script(type="text/javascript", src='/javascripts/jquery-ui.js')
       script(type="text/javascript", src='/javascripts/datepicker-fr.js')
   body
-    block content
-      table(width="100%")
-        tr
-          td(colspan="2", class="block-header")
-            block header
-              h1
-                center.
-                  MAC Provisionning
-        tr
-          td(width="500px", class="content")
-            table(width="500px", class="block-sidebar")
-              tr
-                td(style="vertical-align: bottom", class="block-sidebar")
-                  p.
-                    &nbsp;
-                  br
-                  p(class="navtitle").
-                    Navigation
-              tr
-                td(width="500px")
-                  block sidebar
-                    div(id="accordion")
-                      h3
-                        | Log Files
-                      p
-                        a(href='/import_log_file')
-                          | Import a log file
+    table(width="100%")
+      tr
+        td(colspan="2", class="block-header")
+          block header
+            h1
+              center.
+                MAC Provisionning
+      tr
+        td(width="500px", class="content")
+          table(width="500px", class="block-sidebar")
+            tr
+              td(style="vertical-align: bottom", class="block-sidebar")
+                p.
+                  &nbsp;
+                br
+                p(class="navtitle").
+                  Navigation
+            tr
+              td(width="500px")
+                block sidebar
+                  div(id="accordion")
+                    h3
+                      | == Log Files =======================================
+                    p
+                      a(href='/import_log_file')
+                        | Import a log file
                       br
-                        a(href='/list_log_file')
-                          | List imported log files
-                      h3
-                        | MAC Provisionning frames
-                      p
-                        a(href='/extract_mac_frames')
-                          | Imprt MAC prov. frames from a log file
-                        br
-                        a(href='/list_loaded_grand_livre')
-                          | List MAC prov frames
-                      h3
-                        | SHE commands args (M1-M5)
-                      p
-                        a(href='/extract_she_args_packets')
-                          | Extract SHE args packets from MAC prov frames
-                        br
-                        a(href='/list_she_args_packets')
-                          | List SHE args packets
-                        br
-                        a(href='/unwrap_mac_keys')
-                          | Unwrap MAC keys
-              tr(class="content")
-                td(class="content")
-                  p(class="content").
-                    &nbsp;
-                  br
-                  p(class="content").
-                    &nbsp;
-          td(width="60%", class="content")
-            block content
-              #{content}
-        tr
-          td(colspan="2", class="block-footer")
-            block footer
-              p(align="right")
-                em
-                  font(color="white")
-                    | Copyright © 2022 Rémi COHEN SCALI
-      script(type="text/javascript", src='/javascripts/accordion.js')
-      script(type="text/javascript").
-          $("#accordion").accordion( "option", "active",  #{accordionTab});
+                      a(href='/list_log_file')
+                        | List imported log files
+                      br
+                      a(href='/delete_log_files')
+                        | Delete all imported log files
+                    h3
+                      | == MAC Provisionning frames =========================
+                    p
+                      a(href='/extract_mac_frames')
+                        | Extract and import MAC prov. frames from a log file
+                      br
+                      a(href='/list_mac_prov_frame')
+                        | List MAC prov frames
+                    h3
+                      | == SHE commands args (M1-M5) =======================
+                    p
+                      a(href='/extract_she_args_packets')
+                        | Extract SHE args packets from MAC prov frames
+                      br
+                      a(href='/list_she_args_packets')
+                        | List SHE args packets
+                      br
+                      a(href='/unwrap_mac_keys')
+                        | Unwrap & import MAC keys
+            tr(class="content")
+              td(class="content")
+                p(class="content").
+                  &nbsp;
+                br
+                p(class="content").
+                  &nbsp;
+        td(width="60%", class="content")
+          block content
+            #{content}
+      tr
+        td(colspan="2", class="block-footer")
+          block footer
+            p(align="right")
+              em
+                font(color="white")
+                  | Copyright © 2022 Rémi COHEN SCALI
+    script(type="text/javascript", src='/javascripts/accordion.js')
+    script(type="text/javascript").
+      $("#accordion").accordion( "option", "active",  #{accordionTab});
