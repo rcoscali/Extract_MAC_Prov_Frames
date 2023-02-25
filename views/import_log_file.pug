@@ -4,5 +4,25 @@ block content
   h1 
     center
       | Welcome to #{title}
-    p
-      | #{help}
+  p
+    | #{help}
+    form(ref="logfile", id="logfile", method="post", action="/upload_log_file", encType="multipart/form-data")
+      table(width="100%")
+        tr
+          td(align="right")
+            label(class='labelform').
+              Log file:
+          td
+            input(type="file", id="log_file", title="Select the log file to upload ...", name="log_file", accept="text/ascii")
+        tr
+          td(colspan="2")
+            p
+              | &nbsp;
+        tr
+          td
+            center
+              input(type="submit", title="Send the file to upload ...", class="rapr-button", value="File upload")
+          td
+            center
+              input(type="button", title="Cancel the file upload ...", class="rapr-button", value="Annulation", onclick="$('#releve').trigger('reset');")
+  script(type="text/javascript", src='/javascripts/tooltip.js')
