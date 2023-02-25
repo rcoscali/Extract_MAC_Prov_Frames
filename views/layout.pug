@@ -13,17 +13,17 @@ html(lang="fr")
       script(type="text/javascript", src='/javascripts/jquery.js')
       script(type="text/javascript", src='/javascripts/jquery-ui.js')
       script(type="text/javascript", src='/javascripts/datepicker-fr.js')
-  body(style="background-color: #22A")
-    table(width="100%", style="background-image: url('/images/autosar-embedded-software-feature-640x360_tcm55-109255.jpg'); background-size: 640px; width: 1024px;")
-      tr
-        td(colspan="2", class="block-header")
+  body(style="background-color: #22A" onLoad="localOnLoad();")
+    table(height="100%")
+      tr(style="background-image: url('/images/autosar-embedded.jpg'); ")
+        td(width="400px", colspan="2", class="block-header")
           block header
             h1
               center.
                 MAC Provisionning
-      tr(style="background-image: url('/images/futuristic-technological-wallpaper_79603-1092.png'); background-repeat: no-repeat; ")
-        td(width="500px", class="content")
-          table(width="500px", class="block-sidebar")
+      tr(style="background-image: url('/images/futuristic.png'); background-repeat: no-repeat; background-size: 100%;")
+        td(class="content")
+          table(class="block-sidebar")
             tr
               td(style="vertical-align: bottom", class="block-sidebar")
                 p.
@@ -32,22 +32,22 @@ html(lang="fr")
                 p(class="navtitle").
                   Navigation
             tr
-              td(width="500px")
+              td
                 block sidebar
                   div(id="accordion")
                     h3
-                      | == Log Files =======================================
+                      |  Log Files 
                     p
                       a(href='/import_log_file')
                         | Import a log file
                       br
-                      a(href='/list_log_file')
+                      a(href='/list_log_files')
                         | List imported log files
                       br
                       a(href='/delete_log_files')
                         | Delete all imported log files
                     h3
-                      | == MAC Provisionning frames =========================
+                      |  MAC Provisionning frames 
                     p
                       a(href='/extract_mac_frames')
                         | Extract and import MAC prov. frames from a log file
@@ -55,7 +55,7 @@ html(lang="fr")
                       a(href='/list_mac_prov_frame')
                         | List MAC prov frames
                     h3
-                      | == SHE commands args (M1-M5) =======================
+                      |  SHE commands args (M1-M5) 
                     p
                       a(href='/extract_she_args_packets')
                         | Extract SHE args packets from MAC prov frames
@@ -65,6 +65,23 @@ html(lang="fr")
                       br
                       a(href='/unwrap_mac_keys')
                         | Unwrap & import MAC keys
+                    h3
+                      |  MAC keys
+                    p
+                      a(href='/extract_mac_keys')
+                        | Extract MAC keys from SHE commands args
+                      br
+                      a(href='/list_mac_keys')
+                        | List MAC keys value stored in DB
+                      br
+                      a(href='/calc_mac_frames')
+                        | Compute MAC Auth & ARC from a CAN Frame
+                      br
+                      a(href='/list_mac_can_frames')
+                        | List stored MAC'ed CAN Frames
+                      br
+                      a(href='/delete_mac_keys')
+                        | Delete all stored MAC keys 
             tr(class="content")
               td(class="content")
                 p(class="content").
@@ -72,7 +89,7 @@ html(lang="fr")
                 br
                 p(class="content").
                   &nbsp;
-        td(width="60%", class="content")
+        td(width="1024px", class="content")
           block content
             #{content}
       tr

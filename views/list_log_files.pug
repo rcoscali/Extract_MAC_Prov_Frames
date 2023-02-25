@@ -8,6 +8,54 @@ block content
     p
       | #{help}
   p
-    | #{content}
-
-      
+    font(size="3px")
+      div
+        table(id="log_file_tbl", width="100%")
+          tr
+            th(id="Name")
+              | Name
+            th(id="LogDate")
+              | Log Date
+            th(id="Import Date")
+              | Import Date
+            th(id="Version")
+              | Version
+            th(id="UUID")
+              | UUID
+            th(id="Size")
+              | Size
+  script(type="text/javascript")
+    | var logFilesTbl = document.getElementById('log_file_tbl');
+    | for (var i = log_files_tbl.length-1; i >= 0; i--)
+    | {
+    |   var newRow = logFilesTbl.insertRow(0);
+    |   // Column Name of the log file
+    |   var newCell = newRow.insertCell(0);
+    |   newCell.innerHTML = log_files_tbl[i][0];
+    |   // Column LogDate of the log file
+    |   newCell = newRow.insertCell(1);
+    |   newCell.innerHTML = log_files_tbl[i][1];
+    |   // Column ImportDate of the log file
+    |   newCell = newRow.insertCell(2);
+    |   newCell.innerHTML = log_files_tbl[i][2];
+    |   // Column UUID of the log file
+    |   newCell = newRow.insertCell(3);
+    |   newCell.innerHTML = log_files_tbl[i][3];
+    |   // Column Size of the log file
+    |   newCell = newRow.insertCell(4);
+    |   newCell.innerHTML = log_files_tbl[i][4];
+    |   // Column FramesExtracted of the log file
+    |   newCell = newRow.insertCell(5);
+    |   newCell.innerHTML = log_files_tbl[i][5];
+    | }
+    |
+    | function localOnLoad() {
+    | var log_files_tbl = #{logfiles};
+    | alert(log_files_tbl);
+    | }
+    | $(document).ready(function() {   //same as: $(function() { 
+    |   alert("hi 1");
+    | });
+    | $(window).load(function() {
+    |   alert("hi 2");
+    | });
