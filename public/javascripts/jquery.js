@@ -1,1 +1,1 @@
-/home/rcoscali/Public/MAC_Prov_Extract/public/javascripts/jquery.min.js
+jquery.min.js
