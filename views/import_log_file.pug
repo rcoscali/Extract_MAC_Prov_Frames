@@ -4,12 +4,13 @@ block content
   h1 
     center
       | Welcome to #{title}
-  p
-    | #{help}
+  font(size="3px")
+    p
+      | #{help}
     form(ref="logfile", id="logfile", method="post", action="/upload_log_file", encType="multipart/form-data")
       table(width="100%")
         tr
-          td(align="right")
+          td(align="right", width="50px")
             label(class='labelform').
               Log file:
           td
@@ -20,8 +21,7 @@ block content
               | &nbsp;
         tr
           td
-            center
-              input(type="submit", title="Send the file to upload ...", class="rapr-button", value="File upload")
+            input(type="submit", title="Send the file to upload ...", class="rapr-button", value="File upload")
           td
             center
               input(type="button", title="Cancel the file upload ...", class="rapr-button", value="Annulation", onclick="$('#releve').trigger('reset');")

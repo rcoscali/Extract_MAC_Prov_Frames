@@ -43,7 +43,7 @@ var keystoredb =
 			    'index',
 			    {
 				title: 'MAC Prov Tool',
-				help: '',
+				help: 'Tools for manipulating MAC keys, MAC provisionning CAN frames and SHE commands for Key provisionning from log files ',
 				accordionTab: 0
 			    }
 			);
@@ -65,129 +65,213 @@ var keystoredb =
 		});
 
 		/* POST upload_log_file */
-		router.post('/upload_log_file',
-			    async (req, res, next) =>
-			    {
-				var releve, result;
-				try
+		router.post(
+		    '/upload_log_file',
+		    async (req, res, next) =>
+		    {
+			var releve, result;
+			try
+			{
+			    form.parse(
+				req,
+				(err, fields, files) =>
 				{
-				    form.parse(req, (err, fields, files) =>
+				    if (err)
+				    {
+					next(err);
+					return;
+				    }
+				    req.fields = fields;
+				    req.files = files;
+				    
+				    var log_file = req.files.log_file;
+				    console.log("Uploaded '" + log_file.originalFilename + "' file to: " + log_file.filepath);
+				    fs.readFile(
+					log_file.filepath,
+					'utf8',
+					(err, data) =>
 					{
-					    if (err)
+					    // First let's write file in DB repository
+					    var targetFilePath = DbLogPath + "/" + log_file.originalFilename;
+					    console.log("Target file path: " + targetFilePath);
+					    var newTargetFilePath = targetFilePath;
+					    var fileCntr = 0;
+					    var extension = path.extname(newTargetFilePath);
+					    var name = path.basename(newTargetFilePath, extension);
+					    while (fs.existsSync(newTargetFilePath))
 					    {
-						next(err);
-						return;
+						console.log("Target file path exists: " + newTargetFilePath);
+						fileCntr++;
+						newTargetFilePath =  DbLogPath + "/" + name + '_' + fileCntr + extension;
 					    }
-					    req.fields = fields;
-					    req.files = files;
-					    
-					    var log_file = req.files.log_file;
-					    console.log("Uploaded '" + log_file.originalFilename + "' file to: " + log_file.filepath);
-					    fs.readFile(
+					    console.log("Found free target file path : " + newTargetFilePath);
+					    fs.rename(
 						log_file.filepath,
-						'utf8',
-						(err, data) =>
+						newTargetFilePath,
+						function (err)
 						{
-						    // First let's write file in DB repository
-						    var targetFilePath = DbLogPath + "/" + log_file.originalFilename;
-						    console.log("Target file path: " + targetFilePath);
-						    var newTargetFilePath = targetFilePath;
-						    var fileCntr = 0;
-						    var extension = path.extname(newTargetFilePath);
-						    var name = path.basename(newTargetFilePath, extension);
-						    while (fs.existsSync(newTargetFilePath))
+						    if (err)
 						    {
-							console.log("Target file path exists: " + newTargetFilePath);
-							fileCntr++;
-							newTargetFilePath =  DbLogPath + "/" + name + '_' + fileCntr + extension;
+							console.log("Couldn't rename file " + log_file.filepath + " !");
+							next(err);
+							return;
 						    }
-						    console.log("Found free target file path : " + newTargetFilePath);
-						    fs.rename(
-							log_file.filepath,
-							newTargetFilePath,
-							function (err)
+						    console.log('File Renamed to ' + newTargetFilePath + '!');
+						    const importDateRE = /^date (?<date>.*)$/;
+						    const uuidRE = /^\/\/ Measurement UUID: (?<uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/;
+						    var lines = data.toString().split(/\r?\n/);
+						    console.log('File has ' + lines.length + 'lines !');
+						    var dateLine = lines.filter(elem => elem.match(importDateRE));
+						    console.log("Date line: " + dateLine)
+						    var uuidLine = lines.filter(elem => elem.match(uuidRE));
+						    console.log("UUID line: " + uuidLine)
+						    var logdate, uuid;
+						    dateLine.map(
+							(line) =>
 							{
-							    if (err)
-							    {
-								console.log("Couldn't rename file " + log_file.filepath + " !");
-								next(err);
-								return;
-							    }
-							    console.log('File Renamed to ' + newTargetFilePath + '!');
-							    keystoredb.run("INSERT INTO LogFiles (Name, Date, Size, Content) \
-                                                                                   VALUES        (   ?,    ?,    ?,       ?);",
-									   [path.basename(newTargetFilePath),
-									    (new Date()).toString(),
-									    log_file.size,
-									    data],
-									   (err) =>
-									   {
-									       if (err)
-									       {
-										   console.log("Error while adding log file record in DB!");
-										   next(err);
-										   return;
-									       }
-									   }
-									  );
-							    res.render('upload_log_files',
+							    var fields = importDateRE.exec(line);
+							    logdate = fields.groups.date;
+							    console.log("Log Date = " + logdate);
+							}
+						    );
+						    uuidLine.map(
+							(line) =>
+							{
+							    var fields = uuidRE.exec(line);
+							    uuid = fields.groups.uuid;
+							    console.log("UUID = " + uuid);
+							}
+						    );
+						    keystoredb.run("INSERT INTO LogFiles (Name, LogDate, ImportDate, Size, UUID, Content)   \
+                                                                           VALUES        (   ?,    ?,    ?,       ?,    ?,    ?,       ?);",
+								   [path.basename(newTargetFilePath),
+								    logdate,
+								    (new Date()).toString(),
+								    log_file.size,
+								    uuid, 
+								    data],
+								   (err) =>
+								   {
+								       if (err)
 								       {
-									   title: 'Upload a log file',
-									   help: '',
-									   content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
-									   accordionTab: 0
-								       });
+									   console.log("Error while adding log file record in DB!");
+				 					   next(err);
+									   return;
+								       }
+								   }
+								  );
+						    res.render(
+							'upload_log_files',
+							{
+							    title: 'Upload a log file',
+							    help: 'Upload, process and store a log file and its parameters for further MAC Prov frames extraction',
+							    content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
+							    accordionTab: 0
 							}
 						    );
 						}
 					    );
 					}
 				    );
-				} catch(err) {
-				    next(err);
 				}
-			    });
+			    );
+			}
+			catch(err)
+			{
+			    next(err);
+			    return;
+			}
+		    }
+		);
 		
 		
 		/* GET list_log_file. */
-		router.get('/list_log_file', function(req, res, next) {
-		    res.render('list_log_file',
-			       {
-				   title: 'List stored log file',
-				   help: '',
-				   accordionTab: 0
-			       });
-		});
+		router.get(
+		    '/list_log_files',
+		    function(req, res, next)
+		    {
+			var stmt = "SELECT Name, LogDate, Size, FramesExtracted FROM LogFiles";
+			keystoredb.all(
+			    stmt,
+			    [],
+			    (err, rows) =>
+		            {
+		                if (err)
+				{
+				    next(err);
+				    return;
+				}
+				var contentHtml = "<table>";
+				rows.forEach(
+				    (row) =>
+				    {
+					contentHtml += "<tr><td>" + row.Name + "</td><td>"
+					    + row.LogDate + "</td><td>"
+					    + row.Size + "</td><td><input='checkbox' " + (row.FramesExtracted ? "checked" : "") + " readonly> Frames extracted ?</td></tr>";
+				    }
+				);
+				contentHtml += "</table>";
+				res.render(
+				    'list_log_files',
+				    {
+					title: 'List stored log files',
+					help: 'List all log files imported and stored locally in DB',
+					content: contentHtml,
+					accordionTab: 0
+				    }
+				);
+			    }
+			);
+		    }
+		);
 		
 		/* GET delete_log_files. */
-		router.get('/delete_log_files', function(req, res, next) {
-		    res.render('delete_log_files',
-			       {
-				   title: 'Delete stored log files',
-				   help: 'Delete LOG files stored in DB (record & files)',
-				   accordionTab: 0
-			       });
-		});
+		router.get(
+		    '/delete_log_files',
+		    function(req, res, next)
+		    {
+			res.render(
+			    'delete_log_files',
+			    {
+				title: 'Delete stored log files',
+				help: 'Delete LOG files stored in DB (record & files)',
+				accordionTab: 0
+			    }
+			);
+		    }
+		);
 		
 		/* GET extract_mac_frames. */
-		router.get('/extract_mac_frames', function(req, res, next) {
-		    res.render('extract_mac_frames',
-			       {
-				   title: 'Extract MAC Prov. frames',
-				   help: 'Extract MAC provisionning frames from an uploaded log file',
-				   accordionTab: 1
-			       });
-		});
+		router.get(
+		    '/extract_mac_frames',
+		    function(req, res, next)
+		    {
+			res.render(
+			    'extract_mac_frames',
+			    {
+				title: 'Extract MAC Prov. frames',
+				help: 'Extract MAC provisionning frames from an uploaded log file',
+				accordionTab: 1
+			    }
+			);
+		    }
+		);
 		
 		/* GET list_mac_prov_frame. */
-		router.get('/list_mac_prov_frame', function(req, res, next) {
-		    res.render('list_mac_prov_frame',
-			       {
-				   title: 'List stored MAC prov frames',
-				   help: 'List stored MAC Provisionning frames found in log files',
-				   accordionTab: 1
-			       });
-		});
+		router.get(
+		    '/list_mac_prov_frame',
+		    function(req, res, next)
+		    {
+			res.render(
+			    'list_mac_prov_frame',
+			    {
+				title: 'List stored MAC prov frames',
+				help: 'List stored MAC Provisionning frames found in log files',
+				accordionTab: 1
+			    }
+			);
+		    }
+		);
 		
 		/* GET list_she_args_packets. */
 		router.get('/extract_she_args_packets', function(req, res, next) {
