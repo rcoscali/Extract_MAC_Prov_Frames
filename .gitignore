@@ -13,4 +13,4 @@ var/lib/keystore.db
 
 var/lib/keystore.db-journal
 
-var/log/
+var/log/*
