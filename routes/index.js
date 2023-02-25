@@ -119,19 +119,22 @@ var keystoredb =
 						    console.log('File Renamed to ' + newTargetFilePath + '!');
 						    const importDateRE = /^date (?<date>.*)$/;
 						    const uuidRE = /^\/\/ Measurement UUID: (?<uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/;
+						    const versionRE = /^\/\/ version (?<version>[0-9.]+)$/;
 						    var lines = data.toString().split(/\r?\n/);
-						    console.log('File has ' + lines.length + 'lines !');
+						    console.log('File has ' + lines.length + ' lines !');
 						    var dateLine = lines.filter(elem => elem.match(importDateRE));
 						    console.log("Date line: " + dateLine)
 						    var uuidLine = lines.filter(elem => elem.match(uuidRE));
 						    console.log("UUID line: " + uuidLine)
-						    var logdate, uuid;
+						    var versionLine = lines.filter(elem => elem.match(versionRE));
+						    console.log("Version line: " + versionLine)
+						    var logdate, uuid, version;
 						    dateLine.map(
 							(line) =>
 							{
 							    var fields = importDateRE.exec(line);
 							    logdate = fields.groups.date;
-							    console.log("Log Date = " + logdate);
+							    console.log("    Log Date = " + logdate);
 							}
 						    );
 						    uuidLine.map(
@@ -139,15 +142,25 @@ var keystoredb =
 							{
 							    var fields = uuidRE.exec(line);
 							    uuid = fields.groups.uuid;
-							    console.log("UUID = " + uuid);
+							    console.log("    UUID = " + uuid);
 							}
 						    );
-						    keystoredb.run("INSERT INTO LogFiles (Name, LogDate, ImportDate, Size, UUID, Content)   \
-                                                                           VALUES        (   ?,    ?,    ?,       ?,    ?,    ?,       ?);",
+						    versionLine.map(
+							(line) =>
+							{
+							    var fields = versionRE.exec(line);
+							    version = fields.groups.version;
+							    console.log("    Version = " + version);
+							}
+						    );
+						    keystoredb.run("INSERT INTO LogFiles (Name, LogDate, ImportDate, Version, Size, LinesNb, UUID, Content)   \
+                                                                           VALUES        (   ?,       ?,          ?,       ?,    ?,       ?,    ?,       ?);",
 								   [path.basename(newTargetFilePath),
 								    logdate,
 								    (new Date()).toString(),
+								    version,
 								    log_file.size,
+								    lines.length,
 								    uuid, 
 								    data],
 								   (err) =>
@@ -158,17 +171,17 @@ var keystoredb =
 				 					   next(err);
 									   return;
 								       }
+								       res.render(
+									   'upload_log_files',
+									   {
+									       title: 'Upload a log file',
+									       help: 'Upload, process and store a log file and its parameters for further MAC Prov frames extraction',
+									       content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
+									       accordionTab: 0
+									   }
+								       );
 								   }
 								  );
-						    res.render(
-							'upload_log_files',
-							{
-							    title: 'Upload a log file',
-							    help: 'Upload, process and store a log file and its parameters for further MAC Prov frames extraction',
-							    content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
-							    accordionTab: 0
-							}
-						    );
 						}
 					    );
 					}
@@ -183,7 +196,6 @@ var keystoredb =
 			}
 		    }
 		);
-		
 		
 		/* GET list_log_file. */
 		router.get(
@@ -201,22 +213,30 @@ var keystoredb =
 				    next(err);
 				    return;
 				}
-				var contentHtml = "<table>";
+				var contentHtml = "{[";
+				var firstRow = true;
 				rows.forEach(
 				    (row) =>
 				    {
-					contentHtml += "<tr><td>" + row.Name + "</td><td>"
-					    + row.LogDate + "</td><td>"
-					    + row.Size + "</td><td><input='checkbox' " + (row.FramesExtracted ? "checked" : "") + " readonly> Frames extracted ?</td></tr>";
+					contentHtml +=
+					    (firstRow ? "" : "")+
+					    "{Name:'"+row.Name+
+					    "',LogDate:'"+row.LogDate+
+					    "',ImportDate:'"+row.ImportDate+
+					    "',Size:"+row.Size+
+					    ",UUID:'"+row.UUID+
+					    "',FramesExtracted:"+(row.FramesExtracted ? "true" : "false")+
+					    "}";
+					firstRow = false;
 				    }
 				);
-				contentHtml += "</table>";
+				contentHtml += "]}";
 				res.render(
 				    'list_log_files',
 				    {
 					title: 'List stored log files',
 					help: 'List all log files imported and stored locally in DB',
-					content: contentHtml,
+					logfiles: contentHtml,
 					accordionTab: 0
 				    }
 				);
