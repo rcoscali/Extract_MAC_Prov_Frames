@@ -13,22 +13,24 @@ block content
         table(id="log_file_tbl", width="100%")
           tr
             th(id="Name")
-              | Name
+              Name
             th(id="LogDate")
-              | Log Date
+              Log Date
             th(id="Import Date")
-              | Import Date
+              Import Date
             th(id="Version")
-              | Version
+              Version
             th(id="UUID")
-              | UUID
+              UUID
             th(id="Size")
-              | Size
+              Size
   script(type="text/javascript")
     | var logFilesTbl = document.getElementById('log_file_tbl');
+    | alert(log_files_tbl.length-1);
     | for (var i = log_files_tbl.length-1; i >= 0; i--)
     | {
-    |   var newRow = logFilesTbl.insertRow(0);
+    |   alert(2);
+    |   var newRow = logFilesTbl.insertRow(0); /* Add */
     |   // Column Name of the log file
     |   var newCell = newRow.insertCell(0);
     |   newCell.innerHTML = log_files_tbl[i][0];
@@ -48,14 +50,4 @@ block content
     |   newCell = newRow.insertCell(5);
     |   newCell.innerHTML = log_files_tbl[i][5];
     | }
-    |
-    | function localOnLoad() {
-    | var log_files_tbl = #{logfiles};
-    | alert(log_files_tbl);
-    | }
-    | $(document).ready(function() {   //same as: $(function() { 
-    |   alert("hi 1");
-    | });
-    | $(window).load(function() {
-    |   alert("hi 2");
-    | });
+

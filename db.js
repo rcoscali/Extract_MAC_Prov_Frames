@@ -24,7 +24,7 @@ const util = require('util');
 // DB file path for storing log files
 // const DbFilePath = process.env.HOME + '/AppData/Local/rapr/accounting.db';
 // const DbFilePath = process.env.HOME + '/AppData/Local/rapr/accounting.db';
-const DbFilePath = process.env.HOME + '/Public/MAC_Prov_Extract/var/lib/keystore.db';
+const DbFilePath = process.env.MAC_PROV_ROOT + '/var/lib/keystore.db';
 
 /**
  * Constructor for DB access object
@@ -45,7 +45,7 @@ function db()
      */
     this.openDb = async function()
     {
-	console.log('****** Opening Accounting DB ...');
+	console.log('****** Opening MAC Keys DB ...');
 	// Instanciate accounting DB
 	this.keystore =
 	    new sqlite3.Database(

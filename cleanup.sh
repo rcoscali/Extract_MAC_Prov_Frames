@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm -f /home/rcoscali/Public/MAC_Prov_Extract/var/lib/*
-rm -f /home/rcoscali/Public/MAC_Prov_Extract/var/log/*
-touch /home/rcoscali/Public/MAC_Prov_Extract/var/lib/keystore.db
-node /home/rcoscali/Public/MAC_Prov_Extract/bin/keystore --init-db
+rm -f $MAC_PROV_ROOT/var/lib/*
+rm -f $MAC_PROV_ROOT/var/log/*
+touch $MAC_PROV_ROOT/var/lib/keystore.db
+node $MAC_PROV_ROOT/bin/keystore --init-db

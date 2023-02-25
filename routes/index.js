@@ -12,8 +12,8 @@ const {exec} = require("child_process");
 const form = formidable({uploadDir: os.tmpdir()});
 var app = require('../app');
 
-const DbLogPath = process.env.HOME + '/Public/MAC_Prov_Extract/var/log';
-const DbDirPath = process.env.HOME + '/Public/MAC_Prov_Extract/var/lib';
+const DbLogPath = process.env.PWD + '/var/log';
+const DbDirPath = process.env.PWD + '/var/lib';
 const DbFilePath = DbDirPath + '/keystore.db';
 
 // Instanciate keystore DB
