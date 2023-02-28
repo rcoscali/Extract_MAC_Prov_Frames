@@ -301,12 +301,14 @@ var keystoredb =
                     '/extract_mac_frames',
                     function(req, res, next)
                     {
+			// Select all log files with FramesExtracted flag being false
                         var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE FramesExtracted='0'";
                         keystoredb.all(
                             stmt,
                             [],
                             (err, rows) =>
                             {
+				// Examples of logging entries in log file
 				//
 				//   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c
 				// 8.191 1 7C3             Rx   d 8 02 10 03 00 00 00 00 00
@@ -320,8 +322,7 @@ var keystoredb =
                                     next(err);
                                     return;
                                 }
-                                var firstRow = true;
-                                var lastRow = false;
+				// Initialization of parameters for rendering the page
 				var renderParams =
 				    {
                                         title: 'Extract MAC Prov frames',
@@ -329,8 +330,8 @@ var keystoredb =
 					logfiles: {},
                                         accordionTab: 1
                                     };
-				var lastIndex = rows.length -1;
 				var index = 0;
+				// For each log file found
                                 rows.forEach(
                                     (row) =>
                                     {
@@ -346,12 +347,7 @@ var keystoredb =
 					    var fields;
 					    if ((fields = provFrameRE.exec(lines[i])))
 					    {
-						//console.log("Found provisionning frame starting at line #" + i);
 						result_log += "Found provisionning frame starting at line #" + i + "\\n";
-						//console.log("=>   '" + lines[i] + "'");
-						//result_log += "=>   '" + lines[i] + "'\\n";
-						//console.log("=> timestamp = '" + fields.groups.Timestamp + "'");
-						//result_log += "=> timestamp = '" + fields.groups.Timestamp + "'\\n";
 						var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
 						provFramesStart.push({index:i,regex:provRE});
 					    }
@@ -377,25 +373,20 @@ var keystoredb =
 						    // If match
 						    if (fields = provStart['regex'].exec(lines[i]))
 						    {
-							//console.log("Adding payload for frame #" + ix + " from line #" + i + ": ");
 							result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
 							provFrames[ix]['Parts'][fix] = new Object;
 							provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
-							//console.log("Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ");
 							result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
 							var localpayload = fields.groups.Data;
 							provFrames[ix]['Parts'][fix]['Data'] = localpayload;
-							//console.log("Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ");
 							result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
 							// The first frame payload contains UDS addressing
 							if (i == provStart['index'])
 							    provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
 							else
 							    provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
-							//console.log("Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ");
 							result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
 							provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
-							//console.log("Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'");
 							result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
 							if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
 							{
@@ -410,13 +401,45 @@ var keystoredb =
 						console.log("Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'");
 						result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
 						ix++;
+
+						// Update database by setting FramesExtracted flag to true
+						provFrames.map(
+						    (provFrame) =>
+						    {
+							var updateStmt = "UPDATE LogFiles SET FramesExtracted='1' WHERE LogFiles.Name=?";
+							keystoredb.run(
+							    updateStmt,
+							    [row.Name],
+							    (err) =>
+							    {
+								if (err)
+								{
+								    next(err);
+								    return;
+								}
+								var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
+                                                                                         VALUES             (        ?,     ?);";
+								keystoredb.run(
+								    insertStmt,
+								    [row.id, provFrame['Payload']],
+								    (err) =>
+								    {
+									if (err)
+									{
+									    next(err);
+									    return;
+									}
+								    }
+								);
+							    }
+							);
+						    }
+						);
 					    }
 					);
-					lastRow = (index == lastIndex);
-                                        firstRow = false;
 				    }
                                 );
-				renderParams['result_log'] = result_log/*.replace(/"/g, "\"")*/;
+				renderParams['result_log'] = result_log;
                                 res.render(
 				    'extract_mac_frames',
 				    renderParams
