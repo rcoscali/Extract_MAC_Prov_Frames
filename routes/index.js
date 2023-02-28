@@ -454,14 +454,47 @@ var keystoredb =
                     '/list_mac_prov_frame',
                     function(req, res, next)
                     {
-                        res.render(
-                            'list_mac_prov_frame',
-                            {
-                                title: 'List stored MAC prov frames',
-                                help: 'List stored MAC Provisionning frames found in log files',
-                                accordionTab: 1
-                            }
-                        );
+			var stmt = "SELECT l.Name, f.Frame, f.SHECmdExtracted FROM LogFiles l LEFT JOIN MACProvFrames f ON l.id = f.LogFileId WHERE length(f.Frame) > 0";
+			keystoredb.all(
+			    stmt,
+			    [],
+			    (err, rows) =>
+			    {
+				if (err)
+				{
+				    next(err);
+				    return;
+				}
+				var renderParams =
+				    {
+					title: 'List MAC Provisionning frames',
+					help: 'List MAC provisionning frames extracted',
+					macprovframes: '',
+					accordionTab: 1
+				    };
+				var contentHtml = "";
+				var ix = 0;
+				var firstRow = true;
+				var lastRow = false;
+				rows.forEach(
+				    (row) =>
+				    {
+					if (ix == rows.length-1)
+					    lastRow = true
+					if (!firstRow && !lastRow)
+					    contentHtml += ",";
+					contentHtml += "{name:'" + row.Name + "',frame:'" + row.Frame + "',sheCmdExtracted:" + row.SHECmdExtracted + "}";
+					firstRow = false;
+					ix++;
+				    }
+				);
+				renderParams['macprovframes'] = "[" + contentHtml + "]";
+				res.render(
+				    'list_mac_prov_frame',
+				    renderParams
+				);				
+			    }
+			);
                     }
                 );
                 
