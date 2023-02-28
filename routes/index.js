@@ -309,7 +309,11 @@ var keystoredb =
                             {
 				//
 				//   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c
-				//
+				// 8.191 1 7C3             Rx   d 8 02 10 03 00 00 00 00 00
+				//   7.157965 CANFD   2 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 02 3e 00 55 55 55 55 55   104657  132   323000 a800f7a3 4ba00150 4b280150 20002776 2000091c
+				//   0.007142 CANFD   1 Rx        192  ADAS_A10C_FD                     1 0 8  8 00 00 50 04 7f ff 00 10   103656  136   303000 980150f4 4ba00150 4b280150 20002776 2000091c
+				//   0.002801 CANFD   1 Rx        25e  ADASISv2_A101_FD                 1 0 8  8 00 00 00 00 00 00 00 00   105156  139   303000 f800b73d 4ba00150 4b280150 20002776 2000091c
+				//   
 				var result_log = "";
                                 if (err)
                                 {
@@ -331,73 +335,68 @@ var keystoredb =
                                     (row) =>
                                     {
                                         var lines = row.Content.toString().split(/\r?\n/);
-                                        console.log('File has ' + lines.length + ' lines !');
-                                        result_log += "File has " + lines.length + " lines !\\n";
-					var provFrameRE  = /^  (?<Timestamp>[0-9.]*) (?<ProvRE>[A-Z]+ *1 Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
+                                        console.log('==============================================================');
+                                        console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
+                                        result_log += "==============================================================\\n";
+                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+					var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
 					var provFramesStart = new Array;
 					for (var i = 0; i < lines.length; i++)
 					{
 					    var fields;
 					    if ((fields = provFrameRE.exec(lines[i])))
 					    {
-						console.log("Found provisionning frame starting at line #" + i);
+						//console.log("Found provisionning frame starting at line #" + i);
 						result_log += "Found provisionning frame starting at line #" + i + "\\n";
-						console.log("=>   '" + lines[i] + "'");
-						result_log += "=>   '" + lines[i] + "'\\n";
-						console.log("=> timestamp = '" + fields.groups.Timestamp + "'");
-						result_log += "=> timestamp = '" + fields.groups.Timestamp + "'\\n";
-						// ^  (?<Timestamp>[0-9.]*).*[0-9] [0-9] [a-zA-Z0-9] (?<Data>[0-9a-zA-Z ]+)   (?<Tail>.*)$
-						var provRE = new RegExp('^  (?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
+						//console.log("=>   '" + lines[i] + "'");
+						//result_log += "=>   '" + lines[i] + "'\\n";
+						//console.log("=> timestamp = '" + fields.groups.Timestamp + "'");
+						//result_log += "=> timestamp = '" + fields.groups.Timestamp + "'\\n";
+						var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
 						provFramesStart.push({index:i,regex:provRE});
 					    }
 					}
-                                        provFramesStart.map(
-                                            (lineNr) =>
-                                            {
-						console.log("Frames at lines   " + lineNr['index'] + " with RE: /" + lineNr['regex']);
-						result_log += "Frames at lines   " + lineNr['index'] + " with RE: /" + lineNr['regex'] + "\\n";
-					    }
-					);
-
+					
 					var provFrames = new Array;
 					var ix = 0;
 					provFramesStart.map(
 					    (provStart) =>
 					    {
-						console.log("Extracting frame #" + ix + " !");
-						result_log += "Extracting frame #" + ix + " !\\n";
+						// Frame part index
+						var fix = 0;
 						provFrames[ix] = new Object;
 						provFrames[ix]['Parts'] = new Array;
-						var fix = 0; // Frame part index
 						var payload = "";
+
+						console.log("Extracting frame  #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex']);
+						result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
+
 						for (var i = provStart['index']; i < lines.length; i++, fix++)
 						{
 						    var fields;
+						    // If match
 						    if (fields = provStart['regex'].exec(lines[i]))
 						    {
-							console.log("Adding payload for frame #" + ix + " from line #" + i);
-							result_log += "Adding payload for frame #" + ix + " from line #" + i + "\\n";
+							//console.log("Adding payload for frame #" + ix + " from line #" + i + ": ");
+							result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
 							provFrames[ix]['Parts'][fix] = new Object;
 							provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
-							console.log("    Timestamp = '" + provFrames[ix]['Parts'][fix]['Timestamp'] + "'");
-							result_log += "    Timestamp = '" + provFrames[ix]['Parts'][fix]['Timestamp'] + "'\\n";
+							//console.log("Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ");
+							result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
 							var localpayload = fields.groups.Data;
 							provFrames[ix]['Parts'][fix]['Data'] = localpayload;
-							console.log("    Data      = '" + provFrames[ix]['Parts'][fix]['Data'] + "'");
-							result_log += "    Data      = '" + provFrames[ix]['Parts'][fix]['Data'] + "'\\n";
+							//console.log("Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ");
+							result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
+							// The first frame payload contains UDS addressing
 							if (i == provStart['index'])
-							{
 							    provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
-							}
 							else
-							{
 							    provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
-							}
-							console.log("    Payload   = '" + provFrames[ix]['Parts'][fix]['Payload'] + "'");
-							result_log += "    Payload   = '" + provFrames[ix]['Parts'][fix]['Payload'] + "'\\n";
+							//console.log("Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ");
+							result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
 							provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
-							console.log("    Tail      = '" + provFrames[ix]['Parts'][fix]['Tail'] + "'");
-							result_log += "    Tail      = '" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
+							//console.log("Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'");
+							result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
 							if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
 							{
 							    if (payload.length > 128)
