@@ -7,3 +7,33 @@ block content
   font(size="3px")
     p
       | #{help}
+  p
+    font(size="3px")
+      div
+        table(id="mac_prov_frame_tbl", width="100%")
+          tr
+            th(id="Name", style="background-color: #000")
+              | Name
+            th(id="Payload", style="background-color: #000")
+              | Payload
+            th(id="SHECmdExtracted", style="background-color: #000")
+              | SHE Cmd Extracted
+  script(type="text/javascript")
+    | alert('List of MAC Prov frames');
+    | var mac_prov_frame_tbl = #{macprovframes};
+    | alert(mac_prov_frame_tbl.length);
+    | var macProvFramesTbl = document.getElementById('mac_prov_frame_tbl');
+    | for (var i = mac_prov_frame_tbl.length-1; i >= 0; i--)
+    | {
+    |   var newRow = macProvFramesTbl.insertRow(1); /* Add  a row for this log file */
+    |   // Add a column for the Name of the frame's log file
+    |   var newCell = newRow.insertCell(0);
+    |   newCell.innerHTML = mac_prov_frame_tbl[i]['Name'];
+    |   // Add a column for the Payload of the frame
+    |   newCell = newRow.insertCell(1);
+    |   newCell.innerHTML = mac_prov_frame_tbl[i]['Frame'];
+    |   // Add a column for the FramesExtracted of the log file
+    |   newCell = newRow.insertCell(2);
+    |   newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(mac_prov_frame_tbl[i]['SHECmdExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
+    | }
+
