@@ -13,36 +13,17 @@ block content
       | #{help}
   p
     div
-      form(ref="logfile", id="logfile", method="post", action="/process_log_file_mac_prov/", encType="multipart/form-data")
-        table(width="100%")
+      table(width="100%")
+        tr
+          td(align="right", width="50px")
+            label(class='labelform', for="result_log")
+              | Processing of Log files:
+          td
+            textarea(id="result_log", name="result_log", rows="20", cols="80", wrap="hard", readonly="true")
           tr
-            td(align="right", width="50px")
-              label(class='labelform').
-                Log file:
-            td
-              label(for="logFileSelect")
-                | Select a file to process
-              select(name="logFile", id="LogFileSelect")
-                option(value="")
-                  | -- Please select a log file --
-          tr
-            td(width="20%")
+            td(colspan="2")
               center
-                input(type="submit", title="Select the log file to process for extracting MAC prov frames ...", value="Select this log file")
-            td
-              center
-                input(type="button", title="Cancel the processing ...", value="Cancel", onclick="$('#logfile').trigger('reset');")
-  script(type="text/javascript")
-    | var log_file_tbl = #{logfiles};
-    | alert(log_file_tbl.length);
-    | var select = document.getElementById('logFileSelect');
-    | for (var ix = 0; ix < log_file_tbl.length; ix++)
-    | {
-    |   alert(log_file_tbl[ix]['Name'] + "(" + log_file_tbl[ix]['UUID'] + ")");
-    |   var opt = document.createElement('option');
-    |   opt.value = aLogFile[Name];
-    |   opt.innerHTML = aLogFile[Name] + '(' + aLogFile[UUID] + ')';
-    |   alert(opt.innerHTML);
-    |   select.appendChild(opt);
-    | }
+                input(type="button", title="Back ...", value="Back", onclick="document.location.href='/';")
   script(type="text/javascript", src='/javascripts/tooltip.js')
+  script(type="text/javascript")
+    | document.getElementById('result_log').value = "#{result_log}";
