@@ -29,6 +29,7 @@ CREATE TABLE SHEArgsPackets (id             INTEGER NOT NULL PRIMARY KEY AUTOINC
 CREATE TABLE MACKeys        (id           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                              SHEPacketsId TEXT,
                              MacKey       TEXT,
-                             MasterMaxKey TEXT,
+                             IsMaster     BOOLEAN DEFAULT 0 NOT NULL,
+			     IsActive     BOOLEAN DEFAULT 0 UNIQ NOT NULL,
                              FOREIGN KEY (SHEPacketsId) REFERENCES MACProvFrames (id),
                              UNIQUE(id));
