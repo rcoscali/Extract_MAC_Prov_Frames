@@ -31,32 +31,41 @@ block content
   script(type="text/javascript")
     | var log_files_tbl = #{logfiles};
     | var logFilesTbl = document.getElementById('log_files_tbl');
-    | for (var i = log_files_tbl.length-1; i >= 0; i--)
+  script(type="text/javascript")
+    | function localOnLoad()
     | {
-    |   var newRow = logFilesTbl.insertRow(1); /* Add  a row for this log file */
-    |   // Add a column for the Name of the log file
-    |   var newCell = newRow.insertCell(0);
-    |   newCell.innerHTML = log_files_tbl[i]['Name'];
-    |   // Add a column for the LogDate of the log file
-    |   newCell = newRow.insertCell(1);
-    |   newCell.innerHTML = log_files_tbl[i]['LogDate'];
-    |   // Add a column for the ImportDate of the log file
-    |   newCell = newRow.insertCell(2);
-    |   newCell.innerHTML = log_files_tbl[i]['ImportDate'];
-    |   // Add a column for the Version of the log file
-    |   newCell = newRow.insertCell(3);
-    |   newCell.innerHTML = log_files_tbl[i]['Version'];
-    |   // Add a column for the Size of the log file
-    |   newCell = newRow.insertCell(4);
-    |   newCell.innerHTML = log_files_tbl[i]['Size'];
-    |   // Add a column for the LinesNb of the log file
-    |   newCell = newRow.insertCell(5);
-    |   newCell.innerHTML = log_files_tbl[i]['LinesNb'];
-    |   // Add a column for the UUID of the log file
-    |   newCell = newRow.insertCell(6);
-    |   newCell.innerHTML = log_files_tbl[i]['UUID'];
-    |   // Add a column for the FramesExtracted of the log file
-    |   newCell = newRow.insertCell(7);
-    |   newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(log_files_tbl[i]['FramesExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
+    |   for (var i = log_files_tbl.length-1; i >= 0; i--)
+    |   {
+    |     var newRow = logFilesTbl.insertRow(1); /* Add  a row for this log file */
+    |     // Add a column for the Name of the log file
+    |     var newCell = newRow.insertCell(0);
+    |     // Create a link
+    |     var link = document.createElement("a");
+    |     var href = document.createAttribute("href");
+    |     href.value = '/list_mac_prov_frame/' + log_files_tbl[i]['id'];
+    |     link.setAttributeNode(href);
+    |     link.innerHTML = log_files_tbl[i]['Name'];
+    |     newCell.innerHTML = link.outerHTML;
+    |     // Add a column for the LogDate of the log file
+    |     newCell = newRow.insertCell(1);
+    |     newCell.innerHTML = log_files_tbl[i]['LogDate'];
+    |     // Add a column for the ImportDate of the log file
+    |     newCell = newRow.insertCell(2);
+    |     newCell.innerHTML = log_files_tbl[i]['ImportDate'];
+    |     // Add a column for the Version of the log file
+    |     newCell = newRow.insertCell(3);
+    |     newCell.innerHTML = log_files_tbl[i]['Version'];
+    |     // Add a column for the Size of the log file
+    |     newCell = newRow.insertCell(4);
+    |     newCell.innerHTML = log_files_tbl[i]['Size'];
+    |     // Add a column for the LinesNb of the log file
+    |     newCell = newRow.insertCell(5);
+    |     newCell.innerHTML = log_files_tbl[i]['LinesNb'];
+    |     // Add a column for the UUID of the log file
+    |     newCell = newRow.insertCell(6);
+    |     newCell.innerHTML = log_files_tbl[i]['UUID'];
+    |     // Add a column for the FramesExtracted of the log file
+    |     newCell = newRow.insertCell(7);
+    |     newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(log_files_tbl[i]['FramesExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
+    |   }
     | }
-
