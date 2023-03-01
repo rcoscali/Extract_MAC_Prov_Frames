@@ -1,0 +1,35 @@
+extends layout
+
+block content
+  h1 
+    center
+      | #{title}
+  font(size="3px")
+    p
+      | #{help}
+  p
+    form(ref="set_keys", id="set_mac_keys", method="post", action="#", onSubmit="document.location.href='/' + document.getElementById('mac_key').value + '/' + document.getElementById('master_mac_key').value")
+      table(width="100%")
+        tr
+          td(align="right", width="50px")
+            label(class='labelform', for="mac_key").
+              MacKey
+          td
+            input(type="text", id="mac_key", title="Set the active MAC key ...", name="k_mac_ecu", accept="text/ascii", minlength="32", maxlength="32", size="32")
+        tr
+          td(align="right", width="50px")
+            label(class='labelform', for="master_mac_key").
+              Master Mac Key
+          td
+            input(type="text", id="master_mac_key", title="Set the active Master MAC key ...", name="k_master_mac_ecu", accept="text/ascii", minlength="32", maxlength="32", size="32")
+        tr
+          td(colspan="2")
+            p
+              | &nbsp;
+        tr
+          td
+            input(type="submit", title="Send the keys for activation ...", value="Activate keys")
+          td
+            input(type="button", title="Cancel the file upload ...", class="rapr-button", value="Annulation", onclick="$('#releve').trigger('reset');")
+  script(type="text/javascript")
+    | function localOnLoad() {}
