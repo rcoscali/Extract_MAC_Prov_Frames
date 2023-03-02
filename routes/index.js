@@ -1037,14 +1037,44 @@ var keystoredb =
                     '/extract_she_args_packets/:frameId',
                     (req, res, next) =>
                     {
-                        res.render(
-                            'extract_she_args_packets',
-                            {
-                                title: 'Extract SHE args packets',
-                                help: 'Extract SHE args packets from MAC prov frames',
-                                accordionTab: 2
-                            }
-                        );
+			var activeKeys = new Object;
+			var k_mac_ecu = "Not Set !";
+			var k_master_ecu = "Not Set !";
+			keystoredb.get(
+			    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
+			    (err, row) =>
+			    {
+				if (row != undefined)
+				{
+				    console.log("Active K_MAC_ECU = " + row.MacKey);
+				    k_mac_ecu = row.MacKey;
+				}
+				keystoredb.get(
+				    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
+				    (err, row) =>
+				    {
+					if (row != undefined)
+					{
+					    console.log("Active K_MASTER_ECU = " + row.MacKey);
+					    k_master_ecu = row.MacKey;
+					}
+					activeKeys['kMacEcu'] = k_mac_ecu;
+					activeKeys['kMasterEcu'] = k_master_ecu;
+					console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+					console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+					res.render(
+					    'extract_she_args_packets',
+					    {
+						title: 'Extract SHE args packets',
+						help: 'Extract SHE args packets from MAC prov frames',
+						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+						accordionTab: 2
+					    }
+					);
+				    }
+				);
+			    }
+			);
                     }
                 );
                 
@@ -1053,50 +1083,182 @@ var keystoredb =
                     '/extract_she_args_packets',
                     (req, res, next) =>
                     {
-                        res.render(
-                            'extract_she_args_packets',
-                            {
-                                title: 'Extract SHE args packets',
-                                help: 'Extract SHE args packets from MAC prov frames',
-                                accordionTab: 2
-                            }
-                        );
+			var activeKeys = new Object;
+			var k_mac_ecu = "Not Set !";
+			var k_master_ecu = "Not Set !";
+			keystoredb.get(
+			    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
+			    (err, row) =>
+			    {
+				if (row != undefined)
+				{
+				    console.log("Active K_MAC_ECU = " + row.MacKey);
+				    k_mac_ecu = row.MacKey;
+				}
+				keystoredb.get(
+				    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
+				    (err, row) =>
+				    {
+					if (row != undefined)
+					{
+					    console.log("Active K_MASTER_ECU = " + row.MacKey);
+					    k_master_ecu = row.MacKey;
+					}
+					activeKeys['kMacEcu'] = k_mac_ecu;
+					activeKeys['kMasterEcu'] = k_master_ecu;
+					console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+					console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+					res.render(
+					    'extract_she_args_packets',
+					    {
+						title: 'Extract SHE args packets',
+						help: 'Extract SHE args packets from MAC prov frames',
+						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+						accordionTab: 2
+					    }
+					);
+				    }
+				);
+			    }
+			);
                     }
                 );
                 
                 /* GET list_she_args_packets. */
-                router.get('/list_she_args_packets', function(req, res, next) {
-                    res.render('list_she_args_packets',
-                               {
-                                   title: 'List stored SHE args packets',
-                                   help: '',
-                                   accordionTab: 2
-                               });
-                });
+                router.get(
+		    '/list_she_args_packets',
+		    (req, res, next) =>
+		    {
+			var activeKeys = new Object;
+			var k_mac_ecu = "Not Set !";
+			var k_master_ecu = "Not Set !";
+			keystoredb.get(
+			    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
+			    (err, row) =>
+			    {
+				if (row != undefined)
+				{
+				    console.log("Active K_MAC_ECU = " + row.MacKey);
+				    k_mac_ecu = row.MacKey;
+				}
+				keystoredb.get(
+				    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
+				    (err, row) =>
+				    {
+					if (row != undefined)
+					{
+					    console.log("Active K_MASTER_ECU = " + row.MacKey);
+					    k_master_ecu = row.MacKey;
+					}
+					activeKeys['kMacEcu'] = k_mac_ecu;
+					activeKeys['kMasterEcu'] = k_master_ecu;
+					console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+					console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+					res.render(
+					    'list_she_args_packets',
+					    {
+						title: 'List stored SHE args packets',
+						help: '',
+						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+						accordionTab: 2
+					    }
+					);
+				    }
+				);
+			    }
+			);
+                    }
+		);
                 
                 /* GET unwrap_mac_keys. */
-                router.get('/unwrap_mac_keys', function(req, res, next) {
-                    res.render('unwrap_mac_keys',
-                               {
-                                   title: 'Unwrap MAC keys provided in a selected SHE args packets',
-                                   help: '',
-                                   accordionTab: 2
-                               });
-                });
+                router.get(
+		    '/unwrap_mac_keys',
+		    (req, res, next) =>
+		    {
+			var activeKeys = new Object;
+			var k_mac_ecu = "Not Set !";
+			var k_master_ecu = "Not Set !";
+			keystoredb.get(
+			    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
+			    (err, row) =>
+			    {
+				if (row != undefined)
+				{
+				    console.log("Active K_MAC_ECU = " + row.MacKey);
+				    k_mac_ecu = row.MacKey;
+				}
+				keystoredb.get(
+				    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
+				    (err, row) =>
+				    {
+					if (row != undefined)
+					{
+					    console.log("Active K_MASTER_ECU = " + row.MacKey);
+					    k_master_ecu = row.MacKey;
+					}
+					activeKeys['kMacEcu'] = k_mac_ecu;
+					activeKeys['kMasterEcu'] = k_master_ecu;
+					console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+					console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+					res.render(
+					    'unwrap_mac_keys',
+					    {
+						title: 'Unwrap MAC keys provided in a selected SHE args packets',
+						help: '',
+						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+						accordionTab: 2
+					    }
+					);
+				    }
+				);
+			    }
+			);
+                    }
+		);
 
                 /* GET set_mac_keys. */
                 router.get(
                     '/set_mac_keys',
                     (req, res, next) =>
                     {
-                        res.render(
-                            'set_mac_keys',
-                            {
-                                title: 'Set MAC keys',
-                                help: 'Set active K_MAC_ECU and K_MASTER_ECU',
-                                accordionTab: 2
-                            }
-                        );
+			var activeKeys = new Object;
+			var k_mac_ecu = "Not Set !";
+			var k_master_ecu = "Not Set !";
+			keystoredb.get(
+			    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
+			    (err, row) =>
+			    {
+				if (row != undefined)
+				{
+				    console.log("Active K_MAC_ECU = " + row.MacKey);
+				    k_mac_ecu = row.MacKey;
+				}
+				keystoredb.get(
+				    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
+				    (err, row) =>
+				    {
+					if (row != undefined)
+					{
+					    console.log("Active K_MASTER_ECU = " + row.MacKey);
+					    k_master_ecu = row.MacKey;
+					}
+					activeKeys['kMacEcu'] = k_mac_ecu;
+					activeKeys['kMasterEcu'] = k_master_ecu;
+					console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+					console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+					res.render(
+					    'set_mac_keys',
+					    {
+						title: 'Set MAC keys',
+						help: 'Set active K_MAC_ECU and K_MASTER_ECU',
+						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+						accordionTab: 2
+					    }
+					);
+				    }
+				);
+			    }
+			);
                     }
                 );
             }
