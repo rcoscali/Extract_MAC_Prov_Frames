@@ -26,4 +26,9 @@ block content
             input(type="button", title="Cancel the file upload ...", class="rapr-button", value="Annulation", onclick="$('#releve').trigger('reset');")
   script(type="text/javascript", src='/javascripts/tooltip.js')
   script(type="text/javascript")
-    | function localOnLoad() {}
+    | var active_keys = #{activeKeys};
+    | function localOnLoad() 
+    | {
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
+    | }

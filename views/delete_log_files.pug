@@ -3,11 +3,18 @@ extends layout
 block content
   h1 
     center
-      | Welcome to #{title}
-  font(size="3px")
-    p
-      | #{help}
+      | #{title}
+  font(size="3px", color="#aaf")
+    p(align="right")
+      em
+        | #{help}
   p
-    #{content}
+    font(size="5px").
+      #{content}
   script(type="text/javascript")
-    | function localOnLoad() {}
+    | var active_keys = #{activeKeys};
+    | function localOnLoad() 
+    | {
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
+    | }

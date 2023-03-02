@@ -32,6 +32,7 @@ block content
     | var log_files_tbl = #{logfiles};
     | var logFilesTbl = document.getElementById('log_files_tbl');
   script(type="text/javascript")
+    | var active_keys = #{activeKeys};
     | function localOnLoad()
     | {
     |   for (var i = log_files_tbl.length-1; i >= 0; i--)
@@ -42,7 +43,7 @@ block content
     |     // Create a link
     |     var link = document.createElement("a");
     |     var href = document.createAttribute("href");
-    |     href.value = '/list_mac_prov_frame/' + log_files_tbl[i]['id'];
+    |     href.value = (log_files_tbl[i]['FramesExtracted'] ? '/list_mac_prov_frame/' : '/extract_mac_frames/') + log_files_tbl[i]['id'];
     |     link.setAttributeNode(href);
     |     link.innerHTML = log_files_tbl[i]['Name'];
     |     newCell.innerHTML = link.outerHTML;
@@ -68,4 +69,6 @@ block content
     |     newCell = newRow.insertCell(7);
     |     newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(log_files_tbl[i]['FramesExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
     |   }
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
     | }

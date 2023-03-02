@@ -86,6 +86,12 @@ html(lang="fr")
                       a(href='/delete_mac_keys')
                         | Delete all stored MAC keys
                       br
+                    h3
+                      |  Active K_MAC_ECU/K_MASTER_ECU Keys
+                    p
+                      a(href='/set_mac_keys')
+                        | Set active K_MAC_ECU and K_MASTER_ECU keys 
+                      br
             tr(class="content")
               td(class="content")
                 p(class="content").
@@ -99,10 +105,24 @@ html(lang="fr")
       tr
         td(colspan="2", class="block-footer")
           block footer
-            p(align="right")
-              em
-                font(color="white")
-                  | Copyright © 2022 Rémi COHEN SCALI
+            table
+              tr
+                td
+                  p
+                    div
+                      br
+                      br
+                      br
+                    div
+                      | K_MAC_ECU:
+                      input(id="k_mac_ecu", name="k_mac", minlength="32", maxlength="32", size="32", readonly="true")
+                    div
+                      | K_MASTER_ECU
+                      input(id="k_master_ecu", name="k_master", minlength="32", maxlength="32", size="32", readonly="true")
+              p(align="right")
+                em
+                  font(color="white")
+                    | Copyright © 2022 Rémi COHEN SCALI
     script(type="text/javascript", src='/javascripts/accordion.js')
     script(type="text/javascript").
       $("#accordion").accordion( "option", "active",  #{accordionTab});

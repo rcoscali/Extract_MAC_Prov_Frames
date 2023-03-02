@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "nodemon ./bin/www",
-    "debug": "set DEBUG='express:*,MAC_Prov_Extract:*' & nodemon --trace-warnings --inspect ./bin/www",
+    "debug": "DEBUG='express:*,Extract_MAC_Prov_Frames:*' && nodemon --trace-warnings --inspect ./bin/www",
     "test": "jest"
   },
   "dependencies": {

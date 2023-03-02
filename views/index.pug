@@ -8,4 +8,9 @@ block content
     font(size="3px")
       | Select an entry from the side bar
   script(type="text/javascript")
-    | function localOnLoad() {}
+    | var active_keys = #{activeKeys};
+    | function localOnLoad() 
+    | {
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
+    | }
