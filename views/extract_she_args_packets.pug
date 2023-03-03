@@ -4,9 +4,12 @@ block content
   h1 
     center
       | Welcome to #{title}
-  font(size="3px")
-    p
+  font(color="#aaf", size="3px")
+    p(align="right")
       | #{help}
+  font(size="5px")
+    p
+      | #{content}
   script(type="text/javascript")
     | var active_keys = #{activeKeys};
     | function localOnLoad() 

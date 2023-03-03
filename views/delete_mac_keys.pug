@@ -7,6 +7,9 @@ block content
   font(size="3px")
     p
       | #{help}
+  p
+    font(size="5px").
+      #{content}
   script(type="text/javascript")
     | var active_keys = #{activeKeys};
     | function localOnLoad() 
