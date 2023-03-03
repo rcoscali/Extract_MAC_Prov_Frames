@@ -27,8 +27,13 @@ block content
             | &nbsp;
       tr
         td
-          input(type="button", title="Send the keys for activation ...", value="Activate keys", onClick="document.location.href='/' + document.getElementById('mac_key').value + '/' + document.getElementById('master_mac_key').value")
+          input(type="button", title="Send the keys for activation ...", value="Activate keys", onClick="document.location.href='/activate_keys/' + document.getElementById('mac_key').value + '/' + document.getElementById('master_mac_key').value")
         td
           input(type="button", title="Cancel the file upload ...", value="Annulation", onclick="document.location.href='/'")
   script(type="text/javascript")
-    | function localOnLoad() {}
+    | var active_keys = #{activeKeys};
+    | function localOnLoad() 
+    | {
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
+    | }
