@@ -93,27 +93,27 @@ var keystoredb =
                         var kMasterEcu = req.params['kMasterEcu'];
                         console.log("K_MAC_ECU = " + kMacEcu);
                         console.log("K_MASTER_ECU = " + kMasterEcu);
-                        // keystoredb.serialize(
-                        //     () =>
-                        //     {
+                         keystoredb.serialize(
+                             () =>
+                             {
                                  keystoredb.run(
-                                     "UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 0 AND MacKey != '?'",
+                                     "UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 0 AND IsActive = 1 AND MacKey != ?",
                                      [kMacEcu]
                                  );
-                        //         keystoredb.run(
-                        //             "UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 1 AND MacKey != '?'",
-                        //             [kMasterEcu]
-                        //         );
-                        //         keystoredb.run(
-                        //             "INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUE (?, 0, 1)",
-                        //             [kMacEcu],
-                        //         );
-                        //         keystoredb.run(
-                        //             "INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUE (?, 1, 1)",
-                        //             [kMasterEcu],
-                        //         );                              
-                        //     }
-                        // );
+                                 keystoredb.run(
+                                     "UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 1 AND IsActive = 1 AND MacKey != ?",
+                                     [kMasterEcu]
+                                 );
+                                 keystoredb.run(
+                                     "INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUES (?, 0, 1)",
+                                     [kMacEcu],
+                                 );
+                                 keystoredb.run(
+                                     "INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUES (?, 1, 1)",
+                                     [kMasterEcu],
+                                 );                              
+                             }
+                         );
                         res.render(
                             'index',
                             {
@@ -550,7 +550,7 @@ var keystoredb =
                                                 accordionTab: 1
                                             };
                                         var result_log = "";
-                                        var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE FramesExtracted='0' AND id = ?";
+                                        var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE FramesExtracted=0 AND id = ?";
                                         keystoredb.get(
                                             stmt,
                                             [req.params['logFileId']],
