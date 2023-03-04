@@ -119,6 +119,7 @@ var keystoredb =
                             {
                                 title: 'MAC Prov Tool',
                                 help: 'Tools for manipulating MAC keys, MAC provisionning CAN frames and SHE commands for Key provisionning from log files ',
+                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                 accordionTab: 0
                             }
                         );                                      
