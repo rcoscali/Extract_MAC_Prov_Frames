@@ -1,2 +1,2 @@
-.output keystore.sql
-.schema
+.output keystore.db.sql
+.dump
