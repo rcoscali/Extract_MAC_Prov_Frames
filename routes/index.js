@@ -207,7 +207,7 @@ var keystoredb =
                                         {
                                             if (err)
                                             {
-                                                next(err);
+                                                next(createError(err.status || 500));
                                                 return;
                                             }
                                             req.fields = fields;
@@ -242,7 +242,7 @@ var keystoredb =
                                                             if (err)
                                                             {
                                                                 console.log("Couldn't rename file " + log_file.filepath + " !");
-                                                                next(err);
+                                                                next(err.status || 500);
                                                                 return;
                                                             }
                                                             console.log('File Renamed to ' + newTargetFilePath + '!');
@@ -253,7 +253,7 @@ var keystoredb =
                                                             console.log('File has ' + lines.length + ' lines !');
                                                             if (lines.length <= 1)
                                                             {
-                                                                next("Invalid file content");
+                                                                next(500);
                                                                 return;
                                                             }
                                                             var dateLine = lines.filter(elem => elem.match(importDateRE));
@@ -304,8 +304,7 @@ var keystoredb =
                                                                 {
                                                                     if (err)
                                                                     {
-                                                                        console.log("Error while adding log file record in DB!");
-                                                                        next(err);
+                                                                        next(err.status || 500);
                                                                         return;
                                                                     }
                                                                     res.render(
@@ -331,7 +330,7 @@ var keystoredb =
                         }
                         catch(err)
                         {
-                            next(err);
+                            next(err.status || 500);
                             return;
                         }
                     }
@@ -369,7 +368,7 @@ var keystoredb =
                                     {
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         var renderParams =
@@ -448,7 +447,7 @@ var keystoredb =
                                     {
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         
@@ -460,7 +459,7 @@ var keystoredb =
                                                 {
                                                     if (err)
                                                     {
-                                                        next(err);
+                                                        next(err.status || 500);
                                                         return;
                                                     }
                                                 }
@@ -538,7 +537,7 @@ var keystoredb =
                                         //   
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         var index = 0;
@@ -628,7 +627,7 @@ var keystoredb =
                                                             {
                                                                 if (err)
                                                                 {
-                                                                    next(err);
+                                                                    next(err.status || 500);
                                                                     return;
                                                                 }
                                                                 var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
@@ -640,7 +639,7 @@ var keystoredb =
                                                                     {
                                                                         if (err)
                                                                         {
-                                                                            next(err);
+                                                                            next(err.status || 500);
                                                                             return;
                                                                         }
                                                                     }
@@ -708,7 +707,7 @@ var keystoredb =
                                         var result_log = "";
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         // Initialization of parameters for rendering the page
@@ -807,7 +806,7 @@ var keystoredb =
                                                                     {
                                                                         if (err)
                                                                         {
-                                                                            next(err);
+                                                                            next(err.status || 500);
                                                                             return;
                                                                         }
                                                                         var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
@@ -819,7 +818,7 @@ var keystoredb =
                                                                             {
                                                                                 if (err)
                                                                                 {
-                                                                                    next(err);
+                                                                                    next(err.status || 500);
                                                                                     return;
                                                                                 }
                                                                             }
@@ -881,7 +880,7 @@ var keystoredb =
                                     {
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         var renderParams =
@@ -955,7 +954,7 @@ var keystoredb =
                                     {
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         var renderParams =
@@ -1103,13 +1102,13 @@ var keystoredb =
                                                 var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
                                                 var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
                                                 contentHtml += "{m2:'" + decM2.toString('hex') + "',";
-                                                var cid = decM2.subarray(0, 4).toString('hex').substring(0, 7);
+                                                var cid = decM2.subarray(0, 4).swap16().toString('hex').substring(0, 7);
                                                 contentHtml += "cid:'" + cid + "',";
-                                                var fid = (((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01)).toString('hex');
+                                                var fid = (((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01)).toString(16);
                                                 contentHtml += "fid:" + fid + ",";
                                                 console.log("decM2 = " + decM2.toString('hex'));
-                                                console.log("decM2[16:] = " + decM2.subarray(16).toString('hex'));
-                                                var macKey = decM2.subarray(16,48).toString('hex');
+                                                console.log("decM2[16:] = " + decM2.subarray(16).swap16().toString('hex'));
+                                                var macKey = decM2.subarray(16,48).swap16().toString('hex');
                                                 contentHtml += "key:'" + macKey + "'}";
 
 						// Create records in DB and mark the frame SHE cmd args as extracted
@@ -1260,7 +1259,7 @@ var keystoredb =
 				    {
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         if (row !== undefined)
@@ -1268,10 +1267,10 @@ var keystoredb =
                                             var she = new SHE();
                                             var bufferM2 = Buffer.from(row.Frame);
                                             var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
-                                            var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu).subarray(16,48);
-                                            var cid = "0x" + decM2.subarray(0, 4).toString('hex').substring(0, 7);
+                                            var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu).subarray(16,48).swap16();
+                                            var cid = "0x" + decM2.subarray(0, 4).swap16().toString('hex').substring(0, 7);
                                             var fid = ((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01);
-                                            var key = "0x" + decM2.subarray(16).toString('hex');
+                                            var key = "0x" + decM2.subarray(16).swap16().toString('hex');
                                             renderParams['m2'] = "'" + decM2.toString('hex') + "'";
                                             console.log("m2 = " + decM2.toString('hex'));
                                             renderParams['cid'] = "'" + cid + "'";
@@ -1353,16 +1352,16 @@ var keystoredb =
 				    {
                                         if (err)
                                         {
-                                            next(err);
+                                            next(err.status || 500);
                                             return;
                                         }
                                         var she = new SHE();
                                         var bufferM2 = Buffer.from(row.Frame);
                                         var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
-                                        var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu).subarray(16,48);
-                                        var cid = "0x" + decM2.subarray(0, 4).toString('hex').substring(0, 7);
+                                        var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu).subarray(16,48).swap16();
+                                        var cid = "0x" + decM2.subarray(0, 4).swap16().toString('hex').substring(0, 7);
                                         var fid = (((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01)).toString('hex');
-                                        var key = "0x" + decM2.subarray(16).toString('hex');
+                                        var key = "0x" + decM2.subarray(16).swap16().toString('hex');
                                         renderParams['m2'] = "'" + decM2 + "'";
                                         console.log("m2 = " + decM2);
                                         renderParams['cid'] = "'" + cid + "'";
@@ -1426,6 +1425,35 @@ var keystoredb =
                                         accordionTab: 4
                                     }
                                 );
+                            }
+                        );
+                    }
+                );
+
+                /* GET reset_mac_keys. */
+                router.get(
+                    '/reset_mac_keys',
+                    (req, res, next) =>
+                    {
+                        console.log("*** GET /reset_mac_keys");
+                        var activeKeys = new Object;
+                        var k_mac_ecu = "Not Set !";
+                        var k_master_ecu = "Not Set !";
+                        keystoredb.run(
+			    "DELETE FROM ActiveKeys"
+                        );
+                        
+                        activeKeys['kMacEcu'] = k_mac_ecu;
+                        activeKeys['kMasterEcu'] = k_master_ecu;
+                        console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+                        console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+                        res.render(
+                            'reset_mac_keys',
+                            {
+                                title: 'Reset MAC keys',
+                                help: 'Reset active K_MAC_ECU and K_MASTER_ECU',
+                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                accordionTab: 4
                             }
                         );
                     }
