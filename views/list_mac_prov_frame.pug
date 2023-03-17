@@ -9,8 +9,8 @@ block content
       | #{help}
   p
     font(size="3px")
-      div
-        table(id="mac_prov_frame_tbl", width="100%")
+      div(class="div-scroll")
+        table(id="mac_prov_frame_tbl", width="100%", style="overflow:scroll;white-space:pre;")
           tr
             th(id="Name", style="background-color: #000")
               | Name
@@ -35,7 +35,7 @@ block content
     |     // Create a link
     |     var link = document.createElement("a");
     |     var href = document.createAttribute("href");
-    |     href.value = (mac_prov_frame_tbl[i]['sheCmdExtracted'] ? '/list_she_args_packets/' : '/extract_she_args_packets/') + mac_prov_frame_tbl[i]['id'];
+    |     href.value = (mac_prov_frame_tbl[i]['sheCmdExtracted'] ? '/show_unwrapped_frame/' : '/unwrap_mac_keys_from_frame/') + mac_prov_frame_tbl[i]['id'];
     |     link.setAttributeNode(href);
     |     link.innerHTML = mac_prov_frame_tbl[i]['frame'];
     |     newCell.innerHTML = link.outerHTML;

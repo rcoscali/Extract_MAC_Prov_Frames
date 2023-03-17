@@ -3,17 +3,101 @@ extends layout
 block content
   h1 
     center
-      | Welcome to #{title}
+      | #{title}
   font(color="#aaf", size="3px")
     p(align="right")
       | #{help}
   font(size="5px")
     p
       | #{content}
+    p
+      table(id="she_args_tbl", style="overflow:scroll;white-space:pre;")
+        th
+          td
+            em
+              b. 
+                M2
+          td
+            em
+              b. 
+                CID
+          td
+            em
+              b.
+                FID
+          td
+            em
+              b.
+                KEY
+          td
+            em
+              b.
+                Set as
+          td
+            em
+              b.
+                Set as
   script(type="text/javascript")
     | var active_keys = #{activeKeys};
+    | var she_args_tbl = #{sheArgsTbl};
+    | var sheArgsTbl = document.getElementById('she_args_tbl');
     | function localOnLoad() 
     | {
+    |   for (var i = mac_prov_frame_tbl.length-1; i >= 0; i--)
+    |   {
+    |     var newRow = sheArgsTbl.insertRow(1); // Add a row under header row
+    |     // Add a column in this new row for M2 of the SHE args record
+    |     var newCell = newRow.insertCell(0);
+    |     var alignAttr = document.createAttribute("align");
+    |     alignAttr.value = "center";
+    |     newCell.setAttributeNode(alignAttr);
+    |     newCell.innerHTML = she_args_tbl[i]['m2'];
+    |
+    |     // Add a column in this new row for CID of the SHE args record
+    |     var newCell = newRow.insertCell(1);
+    |     var alignAttr = document.createAttribute("align");
+    |     alignAttr.value = "center";
+    |     newCell.setAttributeNode(alignAttr);
+    |     newCell.innerHTML = she_args_tbl[i]['cid'];
+    |
+    |     // Add a column in this new row for FID of the SHE args record
+    |     var newCell = newRow.insertCell(2);
+    |     var alignAttr = document.createAttribute("align");
+    |     alignAttr.value = "center";
+    |     newCell.setAttributeNode(alignAttr);
+    |     newCell.innerHTML = she_args_tbl[i]['fid'];
+    |
+    |     // Add a column in this new row for KEY of the SHE args record
+    |     var newCell = newRow.insertCell(3);
+    |     var alignAttr = document.createAttribute("align");
+    |     alignAttr.value = "center";
+    |     newCell.setAttributeNode(alignAttr);
+    |     newCell.innerHTML = she_args_tbl[i]['key'];
+    |
+    |     // Add a column in this new row for link to set this key as MAC ECU
+    |     var newCell = newRow.insertCell(4);
+    |     var alignAttr = document.createAttribute("align");
+    |     alignAttr.value = "center";
+    |     newCell.setAttributeNode(alignAttr);
+    |     var link = document.createElement("a");
+    |     var href = document.createAttribute("href");
+    |     href.value = '/set_k_mac_ecu_key/' + she_args_tbl[i]['key'];
+    |     link.setAttributeNode(href);
+    |     link.innerHTML = "kMacEcu";
+    |     newCell.innerHTML = link.outerHTML;
+    |   
+    |     // Add a column in this new row for link to set this key as K MASTER ECU
+    |     var newCell = newRow.insertCell(5);
+    |     var alignAttr = document.createAttribute("align");
+    |     alignAttr.value = "center";
+    |     newCell.setAttributeNode(alignAttr);
+    |     var link = document.createElement("a");
+    |     var href = document.createAttribute("href");
+    |     href.value = '/set_k_master_ecu_key/' + she_args_tbl[i]['key'];
+    |     link.setAttributeNode(href);
+    |     link.innerHTML = "kMasterEcu";
+    |     newCell.innerHTML = link.outerHTML;
+    |   }
     |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
     |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
     | }

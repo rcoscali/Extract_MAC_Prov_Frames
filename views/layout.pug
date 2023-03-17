@@ -51,7 +51,7 @@ html(lang="fr")
                       |  MAC Provisionning frames 
                     p
                       a(href='/extract_mac_frames')
-                        | Extract and import MAC prov. frames from a log file
+                        | Extract and import MAC prov. frames from stored log file
                       br
                       a(href='/list_mac_prov_frame')
                         | List MAC prov frames
@@ -60,7 +60,7 @@ html(lang="fr")
                       |  SHE commands args (M1-M5) 
                     p
                       a(href='/extract_she_args_packets')
-                        | Extract SHE args packets from MAC prov frames
+                        | Extract SHE args packets from stored MAC prov frames
                       br
                       a(href='/list_she_args_packets')
                         | List SHE args packets
@@ -105,20 +105,20 @@ html(lang="fr")
       tr
         td(colspan="2", class="block-footer")
           block footer
-            table
+            table(width="100%")
               tr
                 td
                   p
-                    div
-                      br
-                      br
-                      br
-                    div
-                      | K_MAC_ECU:
-                      input(id="k_mac_ecu", name="k_mac", minlength="32", maxlength="32", size="32", readonly="true")
-                    div
-                      | K_MASTER_ECU
-                      input(id="k_master_ecu", name="k_master", minlength="32", maxlength="32", size="32", readonly="true")
+                    div(align="center")
+                      font(color="red")
+                        b
+                          | K_MAC_ECU :
+                      input(id="k_mac_ecu", name="k_mac", minlength="32", maxlength="32", size="32", readonly="true", style="background-color:red")
+                      | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+                      font(color="yellow")
+                        b
+                          | K_MASTER_ECU :
+                        input(id="k_master_ecu", name="k_master", minlength="32", maxlength="32", size="32", readonly="true", style="background-color:yellow")
               p(align="right")
                 em
                   font(color="white")

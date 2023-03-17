@@ -10,13 +10,11 @@ block content
   p
     font(size="3px")
       div
-        table(id="she_cmd_args_tbl", width="100%")
+        table(id="she_cmd_args_tbl", width="100%", style="overflow:scroll;white-space:pre;")
           tr
-            th(id="M1", style="background-color: #000")
-              | M1
-            th(id="M2", style="background-color: #000")
+            th(id="M2", style="background-color: #000", align="center")
               | M2
-            th(id="KeysExtracted", style="background-color: #000")
+            th(id="KeysExtracted", style="background-color: #000", align="center")
               | Keys Extracted
   script(type="text/javascript")
     | var active_keys = #{activeKeys};
@@ -32,21 +30,18 @@ block content
     |     // Create a link
     |     var link = document.createElement("a");
     |     var href = document.createAttribute("href");
-    |     href.value = (she_args_tbl[i]['keysExtracted'] ? '/list_she_args_packets/' : '/extract_she_args_packets/') + she_args_tbl[i]['id'];
-    |     link.setAttributeNode(href);
-    |     link.innerHTML = she_args_tbl[i]['m1'];
-    |     newCell.innerHTML = link.outerHTML;
-    |     // Add a column for the SHE M1 cmd args of the log file
-    |     var newCell = newRow.insertCell(1);
-    |     // Create a link
-    |     var link = document.createElement("a");
-    |     var href = document.createAttribute("href");
-    |     href.value = (she_args_tbl[i]['keysExtracted'] ? '/list_she_args_packets/' : '/extract_she_args_packets/') + she_args_tbl[i]['id'];
+    |     href.value = (she_args_tbl[i]['keysExtracted'] ? '/show_unwrapped_frame/' : '/unwrap_mac_keys_from_frame/') + she_args_tbl[i]['frameId'];
     |     link.setAttributeNode(href);
     |     link.innerHTML = she_args_tbl[i]['m2'];
+    |     var align = document.createAttribute("align");
+    |     align.value = "center";
+    |     newCell.setAttributeNode(align);
     |     newCell.innerHTML = link.outerHTML;
     |     // Add a column for the KeysExtracted of the log file
-    |     newCell = newRow.insertCell(2);
+    |     newCell = newRow.insertCell(1);
+    |     var align = document.createAttribute("align");
+    |     align.value = "center";
+    |     newCell.setAttributeNode(align);
     |     newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(she_args_tbl[i]['keysExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
     |   }
     |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];

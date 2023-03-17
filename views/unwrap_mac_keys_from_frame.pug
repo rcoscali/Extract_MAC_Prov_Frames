@@ -1,0 +1,56 @@
+extends layout
+
+block content
+  h1 
+    center
+      | #{title}
+  font(size="3px", color="#aaf")
+    p(align="right")
+      | #{help}
+  font(size="5px")
+    p
+      | #{content}
+    p
+      table
+        tr
+          td
+            em
+              b. 
+                M2
+          td(colspan="5")
+            input(type="text", name="m2", id="m2_text", accept="text/ascii", minlength="64", maxlength="65", size="64")
+        tr
+          td
+            em
+              b. 
+                CID
+          td
+            input(type="text", name="cid", id="cid_text", accept="text/ascii", minlength="6", maxlength="8", size="8")
+          td
+            em
+              b.
+                FID
+          td
+            input(type="text", name="fid", id="fid_text", accept="text/ascii", minlength="4", maxlength="5", size="4")
+          td
+            em
+              b.
+                KEY
+          td
+            input(type="text", name="key", id="key_text", accept="text/ascii", minlength="32", maxlength="32", size="32")
+  script(type="text/javascript")
+    | var active_keys = #{activeKeys};
+    | var m2 = #{m2};
+    | var cid = #{cid};
+    | var fid = #{fid};
+    | var key = #{key};
+    | function localOnLoad() 
+    | {
+    |   document.getElementById('m2_text').value = m2;
+    |   document.getElementById('cid_text').value = cid;
+    |   document.getElementById('fid_text').value = fid;
+    |   document.getElementById('key_text').value = key;
+    |
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
+    | }

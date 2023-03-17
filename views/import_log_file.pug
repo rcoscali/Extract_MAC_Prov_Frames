@@ -29,6 +29,17 @@ block content
     | var active_keys = #{activeKeys};
     | function localOnLoad() 
     | {
+    |   document.getElementById('logfile').onsubmit = (event) =>
+    |   {
+    |     event.returnValue = true;
+    |     if (event.preventDefault && document.getElementById('log_file').value === '')
+    |     {
+    |       alert("Please select a log file before submiting !");
+    |       event.preventDefault();
+    |       event.returnValue = false;
+    |     }
+    |     return(event.returnValue);
+    |   }
     |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
     |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
     | }
