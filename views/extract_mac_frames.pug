@@ -12,25 +12,35 @@ block content
     p(align="right")
       | #{help}
   p
-    div
+    font(size="7px", color="#ffa")
+      div(id="status")
+        p.
+          &nbsp;
+    div(class="div-scroll")
       table(width="100%")
         tr
           td(align="right", width="50px")
             label(class='labelform', for="result_log")
               | Processing of Log files:
           td
-            textarea(id="result_log", name="result_log", rows="20", cols="80", wrap="hard", readonly="true")
+            textarea(id="result_log", name="result_log", rows="20", cols="132", wrap="hard", readonly="true", style="overflow:scroll;white-space:pre;")
           tr
             td(colspan="2")
               center
                 input(type="button", title="Back ...", value="Back", onclick="document.location.href='/';")
   script(type="text/javascript", src='/javascripts/tooltip.js')
   script(type="text/javascript")
-    | document.getElementById('result_log').value = "#{result_log}";
-  script(type="text/javascript")
     | var active_keys = #{activeKeys};
+    | var log_file_id = #{logFileID};
+    | var result_status = "#{status}";
+    | var result_log = "#{result_log}";
     | function localOnLoad() 
     | {
+    |   const para = document.createElement("p");
+    |   const node = document.createTextNode(result_status);
+    |   para.appendChild(node);
+    |   document.getElementById('status').appendChild(para);
+    |   document.getElementById('result_log').appendChild(document.createTextNode(result_log));
     |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
     |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
     | }
