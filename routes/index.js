@@ -36,96 +36,116 @@ var keystoredb =
 
                 /* GET home page. */
                 router.get(
-                    '/',
-                    (req, res, next) =>
-                    {
+		    '/',
+		    (req, res, next) =>
+		    {
                         console.log("*** GET /");
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-                            "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
-                            (err, row) =>
-                            {
+			    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 0",
+			    (err, row) =>
+			    {
                                 if (row != undefined)
                                 {
-                                    console.log("Active K_MAC_ECU = " + row.MacKey);
-                                    k_mac_ecu = row.MacKey;
+				    console.log("Active K_MAC_ECU = " + row.MacKey);
+				    k_mac_ecu = row.MacKey;
                                 }
                                 keystoredb.get(
-                                    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
-                                    (err, row) =>
-                                    {
+				    "SELECT MacKey FROM MACKeys WHERE IsActive = 1 AND IsMaster = 1",
+				    (err, row) =>
+				    {
                                         if (row != undefined)
                                         {
-                                            console.log("Active K_MASTER_ECU = " + row.MacKey);
-                                            k_master_ecu = row.MacKey;
+					    console.log("Active K_MASTER_ECU = " + row.MacKey);
+					    k_master_ecu = row.MacKey;
                                         }
                                         activeKeys['kMacEcu'] = k_mac_ecu;
                                         activeKeys['kMasterEcu'] = k_master_ecu;
                                         console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                         console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
                                         var renderParams =
-                                            {
+					    {
                                                 title: 'MAC Prov Tool',
                                                 help: 'Tools for manipulating MAC keys, MAC provisionning CAN frames and SHE commands for Key provisionning from log files ',
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 accordionTab: 0
-                                            }
+					    }
                                         res.render(
-                                            'index',
-                                            renderParams
+					    'index',
+					    renderParams
                                         );
-                                    }
+				    }
                                 );
-                            }
+			    }
                         );
-                    }
+		    }
                 );
                 
                 /* GET set mac keys. */
                 router.get(
-                    '/activate_keys/:kMacEcu/:kMasterEcu',
-                    function(req, res, next)
-                    {
+		    '/activate_keys/:kMacEcu/:kMasterEcu',
+		    function(req, res, next)
+		    {
                         console.log("*** GET /activate_keys/:kMacEcu/:kMasterEcu");
                         var kMacEcu = req.params['kMacEcu'];
                         var kMasterEcu = req.params['kMasterEcu'];
+			var activeKeys = new Object;
+			activeKeys['kMacEcu'] = kMacEcu;
+			activeKeys['kMasterEcu'] = kMasterEcu;
                         console.log("K_MAC_ECU = " + kMacEcu);
                         console.log("K_MASTER_ECU = " + kMasterEcu);
-                         keystoredb.serialize(
-                             () =>
-                             {
-                                 keystoredb.run(
-                                     "UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 0 AND IsActive = 1 AND MacKey != ?",
-                                     [kMacEcu]
-                                 );
-                                 keystoredb.run(
-                                     "UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 1 AND IsActive = 1 AND MacKey != ?",
-                                     [kMasterEcu]
-                                 );
-                                 keystoredb.run(
-                                     "INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUES (?, 0, 1)",
-                                     [kMacEcu],
-                                 );
-                                 keystoredb.run(
-                                     "INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUES (?, 1, 1)",
-                                     [kMasterEcu],
-                                 );                              
-                             }
-                         );
+                        keystoredb.serialize(
+			    () =>
+			    {
+                                keystoredb.get(
+				    "SELECT * FROM MACKeys WHERE IsMaster = 0 AND IsActive = 1 AND MacKey = ?",
+				    [kMacEcu],
+				    (err, row) =>
+				    {
+					console.log("=> row = " + row);
+					if (row != undefined)
+					    return;
+					else
+					{
+					    console.log("=> 2");
+					    keystoredb.run(
+						"UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 0 AND IsActive = 1 AND MacKey != ?",
+						[kMacEcu]
+					    );
+					    console.log("=> 3");
+					    keystoredb.run(
+						"UPDATE MACKeys SET IsActive = 0 WHERE IsMaster = 1 AND IsActive = 1 AND MacKey != ?",
+						[kMasterEcu]
+					    );
+					    console.log("=> 4");
+					    keystoredb.run(
+						"INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUES (?, 0, 1)",
+						[kMacEcu],
+					    );
+					    console.log("=> 5");
+					    keystoredb.run(
+						"INSERT INTO MACKeys (MacKey, IsMaster, IsActive) VALUES (?, 1, 1)",
+						[kMasterEcu],
+					    );
+					}
+				    }
+				);
+			    }
+                        );
                         res.render(
-                            'index',
-                            {
+			    'index',
+			    {
                                 title: 'MAC Prov Tool',
                                 help: 'Tools for manipulating MAC keys, MAC provisionning CAN frames and SHE commands for Key provisionning from log files ',
                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                 accordionTab: 0
-                            }
+			    }
                         );                                      
-                    }
+		    }
                 );
-                
+		
                 /*
                  * Log Files functions
                  */
@@ -552,7 +572,7 @@ var keystoredb =
                                             };
                                         var result_log = "";
                                         var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE FramesExtracted=0 AND id = ?";
-                                        keystoredb.get(
+                                        keystoredb.all(
                                             stmt,
                                             [req.params['logFileId']],
                                             (err, row) =>
@@ -656,7 +676,7 @@ var keystoredb =
                                                                             return;
                                                                         }
                                                                         var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
-                                                                                                         VALUES             (        ?,     ?);";
+                                                                                                 VALUES             (        ?,     ?);";
                                                                         keystoredb.run(
                                                                             insertStmt,
                                                                             [row.id, provFrame['Payload']],
@@ -1356,5 +1376,5 @@ var keystoredb =
             }
         }
     );
-        
+
 module.exports = router;
