@@ -1,35 +1,50 @@
-CREATE TABLE LogFiles   (id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                         Name            TEXT    DEFAULT 'Log-Doe' NOT NULL,
-                         LogDate         TEXT    DEFAULT 0,
-                         ImportDate      TEXT    DEFAULT 0 NOT NULL,
-                         UUID            TEXT    DEFAULT '00000000-0000-0000-0000-000000000000',
-                         Version         TEXT    DEFAULT '0.0',
-                         LinesNb         INTEGER DEFAULT 0,
-                         Size            INTEGER DEFAULT 0,
-                         Content         BLOB,
-                         FramesExtracted BOOLEAN DEFAULT 0 NOT NULL,
-                         UNIQUE(id));
+CREATE TABLE IF NOT EXISTS "LogFiles" (
+	"id"	INTEGER NOT NULL,
+	"Name"	TEXT NOT NULL DEFAULT 'Log-Doe',
+	"LogDate"	TEXT DEFAULT 0,
+	"ImportDate"	TEXT NOT NULL DEFAULT 0,
+	"UUID"	TEXT DEFAULT '00000000-0000-0000-0000-000000000000',
+	"Version"	TEXT DEFAULT '0.0',
+	"LinesNb"	INTEGER DEFAULT 0,
+	"Size"	INTEGER DEFAULT 0,
+	"Content"	BLOB,
+	"FramesExtracted"	BOOLEAN NOT NULL DEFAULT 0,
+	UNIQUE("id"),
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
 CREATE TABLE sqlite_sequence(name,seq);
-CREATE TABLE MACProvFrames (id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                            LogFileId       INTEGER,
-                            Frame           TEXT,
-                            SHECmdExtracted BOOLEAN DEFAULT 0 NOT NULL,
-                            FOREIGN KEY (LogFileId) REFERENCES LogFiles (id),
-                            UNIQUE(id));
-CREATE TABLE SHEArgsPackets (id             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                             MACProvFrameId INTEGER,
-                             M1             TEXT,
-                             M2             TEXT,
-                             M3             TEXT,
-                             M4             TEXT,
-                             M5             TEXT,
-                             KeysExtracted  BOOLEAN DEFAULT 0 NOT NULL,
-                             FOREIGN KEY (MACProvFrameId) REFERENCES MACProvFrames (id),
-                             UNIQUE(id));
-CREATE TABLE MACKeys        (id           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                             SHEPacketsId TEXT,
-                             MacKey       TEXT,
-                             IsMaster     BOOLEAN DEFAULT 0 NOT NULL,
-			     IsActive     BOOLEAN DEFAULT 0 UNIQ NOT NULL,
-                             FOREIGN KEY (SHEPacketsId) REFERENCES MACProvFrames (id),
-                             UNIQUE(id));
+CREATE TABLE IF NOT EXISTS "MACProvFrames" (
+	"id"	INTEGER NOT NULL,
+	"LogFileId"	INTEGER,
+	"Frame"	TEXT,
+	"SHECmdExtracted"	BOOLEAN NOT NULL DEFAULT 0,
+	FOREIGN KEY("LogFileId") REFERENCES "LogFiles"("id"),
+	UNIQUE("id"),
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "SHEArgsPackets" (
+	"id"	INTEGER NOT NULL,
+	"MACProvFrameId"	INTEGER,
+	"M2"	TEXT,
+	"KeysExtracted"	BOOLEAN NOT NULL DEFAULT 0,
+	FOREIGN KEY("MACProvFrameId") REFERENCES "MACProvFrames"("id"),
+	UNIQUE("id"),
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "MACKeys" (
+	"id"	INTEGER NOT NULL,
+	"MACProvFrameId"	INTEGER,
+	"MacKey"	TEXT,
+	"cid"	TEXT,
+	"fid"	TEXT,
+	"IsMaster"	BOOLEAN NOT NULL DEFAULT 0,
+	UNIQUE("id"),
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "ActiveKeys" (
+	"id"	INTEGER NOT NULL,
+	"MacEcu"	TEXT,
+	"MasterEcu"	TEXT,
+	UNIQUE("id"),
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
