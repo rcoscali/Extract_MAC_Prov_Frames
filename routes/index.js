@@ -887,7 +887,6 @@ var keystoredb =
                                             {
                                                 title: 'List MAC Provisionning frames',
                                                 help: 'List MAC provisionning frames extracted',
-                                                macprovframes: '',
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 accordionTab: 1
                                             };
@@ -962,7 +961,6 @@ var keystoredb =
                                                 title: 'List MAC Provisionning frames',
                                                 help: 'List MAC provisionning frames extracted',
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-                                                macprovframes: '',
                                                 accordionTab: 1
                                             };
 
@@ -1019,33 +1017,53 @@ var keystoredb =
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
 
 				// Cut Prov frame in 2 64 bytes packets: MSB -> M1, LSB -> M2
-				var SHE_m1, SHE_m2;
+				var bufM2;
 				var stmt = "SELECT Frame FROM MACProvFrames WHERE id = ?";
 				keystoredb.get(
 				    stmt,
 				    [req.params['frameId']],
 				    (err, row) =>
 				    {
-					SHE_m1 = row.Frame.substring(0, 32);
-					SHE_m2 = row.Frame.substring(32, 64);
-					console.log("SHE_m1 = " + SHE_m1);
-					console.log("SHE_m2 = " + SHE_m2);
+					var SHE_m2 = row.Frame.substring(32, 64);
+                                        var bufferM2 = Buffer.from(SHE_m2);
+                                        var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
+
+                                        var bufM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
+                                        var cid = "0x" + she.getCID(bufM2);
+                                        var fid = "0x" + she.getFID(bufM2);
+                                        var macKey = "0x" + she.getKEY(bufM2).toString('hex');
+                                        
+                                        contentHtml += "[{m2:'" + bufM2.toString('hex') + "',";
+                                        contentHtml += "cid:'" + cid + "',";
+                                        contentHtml += "fid:'" + fid + "',";
+                                        contentHtml += "key:'" + macKey + "'}]";
+                                        
 					// Create records in DB and mark the frame SHE cmd args as extracted
-					keystoredb.run(
-					    "UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?",
-					    [req.params['frameId']]
-					);
-					keystoredb.run(
-					    "INSERT INTO SHEArgsPackets (MACProvFrameId, M1, M2) VALUES (?, ?, ?)",
-					    [req.params['frameId'], SHE_m1, SHE_m2]
-					);
+                                        keystoredb.serialize(
+                                            () =>
+                                            {
+					        keystoredb.run(
+					            "UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?",
+					            [req.params['frameId']]
+					        );
+					        keystoredb.run(
+					            "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?, ?)",
+					            [req.params['frameId'], bufM2]
+					        );
+					        keystoredb.run(
+					            "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid) VALUES (?, ?, ?)",
+					            [req.params['frameId'], macKey, cid, fid]
+					        );
+                                            }
+                                        );
 					res.render(
 					    'extract_she_args_packets',
 					    {
 						title: 'Extract SHE args packets',
 						help: 'Extract SHE args packets from MAC prov frames',
 						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-						content: '1 frame processed',
+						content: '1 frame processed !',
+                                                sheArgsTbl: contentHtml,
 						accordionTab: 2
 					    }
 					);
@@ -1095,20 +1113,22 @@ var keystoredb =
 					rows.forEach(
 					    (row, ix) =>
 					    {
-                                                if (ix > 0 && ix < rows.length)
-                                                    contentHtml += ",";
 						var SHE_m2 = row.Frame.substring(32, 64);
                                                 var bufferM2 = Buffer.from(SHE_m2);
                                                 var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
-                                                var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
-                                                contentHtml += "{m2:'" + decM2.toString('hex') + "',";
-                                                var cid = decM2.subarray(0, 4).swap16().toString('hex').substring(0, 7);
-                                                contentHtml += "cid:'" + cid + "',";
-                                                var fid = (((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01)).toString(16);
-                                                contentHtml += "fid:" + fid + ",";
+                                                var bufM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
+                                                var cid = "0x" + she.getCID(bufM2);
+                                                var fid = "0x" + she.getFID(bufM2);
+                                                var macKey = "0x" + she.getKEY(bufM2).toString('hex');
+
                                                 console.log("decM2 = " + decM2.toString('hex'));
                                                 console.log("decM2[16:] = " + decM2.subarray(16).swap16().toString('hex'));
-                                                var macKey = decM2.subarray(16,48).swap16().toString('hex');
+
+                                                if (ix > 0 && ix < rows.length)
+                                                    contentHtml += ",";
+                                                contentHtml += "{m2:'" + bufM2.toString('hex') + "',";
+                                                contentHtml += "cid:'" + cid + "',";
+                                                contentHtml += "fid:'" + fid + "',";
                                                 contentHtml += "key:'" + macKey + "'}";
 
 						// Create records in DB and mark the frame SHE cmd args as extracted
@@ -1121,7 +1141,7 @@ var keystoredb =
 						        );
 						        keystoredb.run(
 						            "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?)",
-						            [row.id, decM2.toString('hex')]
+						            [row.id, bufM2]
 						        );
 						        keystoredb.run(
 						            "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid) VALUES (?, ?, ?, ?)",
@@ -1257,35 +1277,41 @@ var keystoredb =
 				    [frameIdParam],
 				    (err, row) =>
 				    {
-                                        if (err)
+                                        if (err || row === undefined)
                                         {
                                             next(err.status || 500);
                                             return;
                                         }
-                                        if (row !== undefined)
+                                        else
                                         {
                                             var she = new SHE();
-                                            var bufferM2 = Buffer.from(row.Frame);
+                                            var bufferFrame = Buffer.from(row.Frame);
+                                            console.log("bufferFrame = " + bufferFrame.toString('hex'));
                                             var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
-                                            var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu).subarray(16,48).swap16();
-                                            var cid = "0x" + decM2.subarray(0, 4).swap16().toString('hex').substring(0, 7);
-                                            var fid = ((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01);
-                                            var key = "0x" + decM2.subarray(16).swap16().toString('hex');
-                                            renderParams['m2'] = "'" + decM2.toString('hex') + "'";
-                                            console.log("m2 = " + decM2.toString('hex'));
+
+                                            var bufM2 = she.decrypt_M2(bufferFrame, bufferKMasterEcu);
+                                            console.log("bufM2 = " + bufM2.toString('hex'));
+                                            var cid = "0x" + she.getCID(bufM2);
+                                            var fid = "0x" + she.getFID(bufM2);
+                                            var key = "0x" + she.getKEY(bufM2).toString('hex');
+
+                                            renderParams['m2'] = "'" + bufM2.toString('hex') + "'";
                                             renderParams['cid'] = "'" + cid + "'";
-                                            console.log("cid = " + cid);
-                                            renderParams['fid'] = fid;
-                                            console.log("fid = " + fid);
+                                            renderParams['fid'] = "'" + fid + "'";
                                             renderParams['key'] = "'" + key + "'";
-                                            console.log("key = '" + key + "'");
+
+                                            console.log("m2 = " + bufM2.toString('hex'));
+                                            console.log("cid = " + cid);
+                                            console.log("fid = " + fid);
+                                            console.log("key = " + key);
+
                                             keystoredb.serialize(
                                                 () =>
                                                 {
                                                     keystoredb.run("UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?", [frameIdParam]);
                                                     keystoredb.run(
                                                         "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?)",
-                                                        [frameIdParam, decM2]
+                                                        [frameIdParam, bufM2]
                                                     );
                                                     keystoredb.run(
                                                         "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid, IsMaster) VALUES (?, ?, ?, ?, 0)",
@@ -1350,26 +1376,27 @@ var keystoredb =
 				    [frameIdParam],
 				    (err, row) =>
 				    {
-                                        if (err)
+                                        if (err || row == undefined)
                                         {
                                             next(err.status || 500);
                                             return;
                                         }
                                         var she = new SHE();
-                                        var bufferM2 = Buffer.from(row.Frame);
-                                        var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
-                                        var decM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu).subarray(16,48).swap16();
-                                        var cid = "0x" + decM2.subarray(0, 4).swap16().toString('hex').substring(0, 7);
-                                        var fid = (((decM2[3] & 0x0F) << 1) + ((decM2[4] >> 7) & 0x01)).toString('hex');
-                                        var key = "0x" + decM2.subarray(16).swap16().toString('hex');
-                                        renderParams['m2'] = "'" + decM2 + "'";
-                                        console.log("m2 = " + decM2);
+                                        var bufM2 = Buffer.from(row.M2);
+                                        var cid = "0x" + she.getCID(bufM2);
+                                        var fid = "0x" + she.getFID(bufM2);
+                                        var key = "0x" + she.getKEY(bufM2).toString('hex');
+
+                                        renderParams['m2'] = "'" + bufM2 + "'";
                                         renderParams['cid'] = "'" + cid + "'";
-                                        console.log("cid = " + cid);
-                                        renderParams['fid'] = fid;
-                                        console.log("fid = " + fid);
+                                        renderParams['fid'] = "'" + fid + "'";
                                         renderParams['key'] = "'" + key + "'";
-                                        console.log("key = '" + key + "'");
+
+                                        console.log("m2 = " + bufM2);
+                                        console.log("cid = " + cid);
+                                        console.log("fid = " + fid);
+                                        console.log("key = " + key);
+
                                         try
                                         {
                                             keystoredb.run("UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?", [frameIdParam]);

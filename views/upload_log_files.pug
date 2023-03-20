@@ -9,6 +9,9 @@ block content
       | #{help}
   p
     | #{content}
+  p
+    center
+      input(type="button", value="Import another file again ...", onClick="document.location.href='/import_log_file'")
   script(type="text/javascript")
     | var active_keys = #{activeKeys};
     | function localOnLoad() 
