@@ -26,10 +26,14 @@ block content
               | Lines Nb
             th(id="UUID", style="background-color: #000")
               | UUID
-            th(id="FramesExtracted", style="background-color: #000")
-              | Frames Extracted
-            th(id="SecuredFramesExtracted", style="background-color: #000")
-              | Secured Frames Extracted
+            th(id="FramesExtracted", style="background-color: #000").
+              Prov
+              Frames
+              Extracted
+            th(id="SecuredFramesExtracted", style="background-color: #000").
+              Secured
+              Frames
+              Extracted
   script(type="text/javascript")
     | var log_files_tbl = #{logfiles};
     | var logFilesTbl = document.getElementById('log_files_tbl');
@@ -73,20 +77,28 @@ block content
     |     newCell.innerHTML = log_files_tbl[i]['UUID'];
     |     // Add a column for the FramesExtracted of the log file
     |     newCell = newRow.insertCell(7);
-    |     newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(log_files_tbl[i]['FramesExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
+    |     newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked" readonly'+(log_files_tbl[i]['FramesExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
     |     // Add a column for the FramesExtracted of the log file
     |     newCell = newRow.insertCell(8);
     |     var inputelem = document.createElement("input"); 
     |     var typeatttr = document.createAttribute("type");
     |     typeatttr.value = "checkbox";
     |     inputelem.setAttributeNode(typeatttr);
-    |     var onclickattr = document.createAttribute("onclick");
-    |     onclickattr.value = "onSecuredFrameExtract(" + i +")";
-    |     inputelem.setAttributeNode(onclickattr);
     |     if (log_files_tbl[i]['SecuredFramesExtracted'])
     |     {
     |       var checkedattr = document.createAttribute("checked");
     |       inputelem.setAttributeNode(checkedattr);
+    |       var roattr = document.createAttribute("readonly");
+    |       inputelem.setAttributeNode(roattr);
+    |       var onclickattr = document.createAttribute("onclick");
+    |       onclickattr.value = "this.checked=!this.checked";
+    |       inputelem.setAttributeNode(onclickattr);
+    |     }
+    |     else
+    |     {
+    |       var onclickattr = document.createAttribute("onclick");
+    |       onclickattr.value = "onSecuredFrameExtract(" + i +")";
+    |       inputelem.setAttributeNode(onclickattr);
     |     }
     |     
     |     newCell.innerHTML = inputelem.outerHTML;

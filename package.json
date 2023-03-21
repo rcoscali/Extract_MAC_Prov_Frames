@@ -29,6 +29,7 @@
     "pug": "^3.0.2",
     "request-promise": "^0.0.1",
     "she_decrypt": "^1.2.0",
+    "she_encrypt": "^1.0.0",
     "sqlite3": "^5.1.2",
     "stylus": "0.54.5",
     "xml2js": "^0.4.23"

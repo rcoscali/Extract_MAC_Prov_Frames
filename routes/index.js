@@ -11,7 +11,8 @@ const sqlite3 = require('sqlite3').verbose();
 const {exec} = require("child_process");
 const form = formidable({uploadDir: os.tmpdir()});
 var AesCmac = require('node-aes-cmac').aesCmac;
-const SHE = require('she_decrypt');
+const decSHE = require('she_decrypt');
+const encSHE = require('she_encrypt');
 var app = require('../app');
 
 const DbLogPath = process.env.MAC_PROV_ROOT + '/var/log';
@@ -360,7 +361,8 @@ var keystoredb =
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
-                                var stmt = "SELECT id, Name, LogDate, ImportDate, Version, Size, LinesNb, UUID, FramesExtracted FROM LogFiles";
+                                var stmt = "SELECT id, Name, LogDate, ImportDate, Version, Size, LinesNb, " +
+                                    "UUID, FramesExtracted, SecuredFramesExtracted FROM LogFiles";
                                 keystoredb.all(
                                     stmt,
                                     [],
@@ -533,48 +535,66 @@ var keystoredb =
                                         // For the found log file
 					if (row.Content == undefined)
 					{
-					    console.log("row = " + row.Content);
 					    next("Couldn't get log file content from DB");
 					    return;
 					}
+                                        // Update LogFiles table for avoiding several extract
+                                        var updateStmt = "UPDATE LogFiles SET SecuredFramesExtracted='1' WHERE LogFiles.id=?";
+                                        keystoredb.run(
+                                            updateStmt,
+                                            [logFileId]
+                                        );
                                         var lines = row.Content.split(/\r?\n/);
                                         console.log('==============================================================');
                                         console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
                                         result_log += "==============================================================\\n";
                                         result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                        var frameRE = /^ (?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+) ?(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
+                                        var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<lsb>([0-9a-fA-F]{2} ){2})(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                         var frames = new Array;
+                                        var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, tMAC, Payload, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?)";
                                         for (var i = 0; i < lines.length; i++)
                                         {
-                                            console.log("Line #"+i+" processing ...");
                                             var fields;
                                             if ((fields = frameRE.exec(lines[i])))
                                             {
-                                                console.log("Found frame at line #" + i);
-                                                result_log += "Found frame at line #" + i + "\\n";
+                                                result_log += " - Found frame at line #" + i + "\\n";
                                                 var tstamp = fields.groups.Timestamp;
-                                                var id = fields.groups.id;
+                                                var fid = fields.groups.id;
                                                 var name = fields.groups.name;
                                                 var payload = fields.groups.payload;
-                                                var tmac = fields.groups.tmac;
-                                                console.log("tstamp = " + tstamp);
-                                                console.log("id = " + id);
-                                                console.log("name = " + name);
-                                                console.log("payload = " + payload);
-                                                console.log("tmac = " + tmac);
-                                                frames.push({index:i});
+                                                var lsb = fields.groups.lsb.trim();
+                                                var tmac = fields.groups.tmac.trim();
+                                                result_log += "   = tstamp = '" + tstamp + "'";
+                                                result_log += " id = '" + fid + "'";
+                                                result_log += " name = '" + name + "'";
+                                                result_log += " lsb = '" + lsb + "'";
+                                                result_log += " tmac = '" + tmac + "'";
+                                                var padRE = /((?<pad>00) )+$/;
+                                                var pad = "";
+                                                if ((fields = padRE.exec(payload)) != null)
+                                                {
+                                                    fields = padRE.exec(payload);
+                                                    pad = payload.substring(fields.index).trim();
+                                                    payload = payload.substring(0, fields.index-1);
+                                                    result_log += " pad = '" + pad + "'";
+                                                    result_log += " payload = '" + payload + "'";
+                                                    result_log += "\\n";
+                                                }
+                                                keystoredb.run(
+                                                    stmt,
+                                                    [name, tstamp, fid, tmac, payload, lsb, pad]
+                                                );
                                             }
                                         }
-                                        
+                                        renderParams['result_log'] = result_log;
+                                        renderParams['status'] =
+                                            " Secured frames extracted from log file with id = " + logFileId +
+                                            "! Processing log is here after:";
+                                        res.render(
+                                            'extract_mac_frames',
+                                            renderParams
+                                        );
                                     }
-                                );
-                                renderParams['result_log'] = result_log;
-                                renderParams['status'] =
-                                    " Secured frames extracted from log file with id = " + logFileId +
-                                    "! Processing log is here after:";
-                                res.render(
-                                    'extract_mac_frames',
-                                    renderParams
                                 );
                             }
                         );
@@ -1204,7 +1224,7 @@ var keystoredb =
 				    [],
 				    (err, rows) =>
 				    {
-                                        var she = new SHE();
+                                        var she = new decSHE();
                                         var ix;
                                         var contentHtml = "[";
                                         
@@ -1382,7 +1402,7 @@ var keystoredb =
                                         }
                                         else
                                         {
-                                            var she = new SHE();
+                                            var she = new decSHE();
                                             var bufferFrame = Buffer.from(row.Frame);
                                             console.log("bufferFrame = " + bufferFrame.toString('hex'));
                                             var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
@@ -1479,7 +1499,7 @@ var keystoredb =
                                             next(err.status || 500);
                                             return;
                                         }
-                                        var she = new SHE();
+                                        var she = new decSHE();
                                         var bufM2 = Buffer.from(row.M2);
                                         var cid = "0x" + she.getCID(bufM2);
                                         var fid = "0x" + she.getFID(bufM2);
