@@ -397,7 +397,8 @@ var keystoredb =
                                                     "Size:"+row.Size+","+
                                                     "LinesNb:"+row.LinesNb+","+
                                                     "UUID:'"+row.UUID+"',"+
-                                                    "FramesExtracted:"+(row.FramesExtracted ? "true" : "false")+"}"+(lastRow ? "]" : ",");
+                                                    "FramesExtracted:"+(row.FramesExtracted ? "true" : "false")+","+
+                                                    "SecuredFramesExtracted:"+(row.SecuredFramesExtracted ? "true" : "false")+"}"+(lastRow ? "]" : ",");
                                                 index++;
                                             }
                                         );
@@ -482,6 +483,104 @@ var keystoredb =
                     }
                 );
                 
+                /* GET extract_secured_mac_frames. */
+                router.get(
+                    '/extract_secured_mac_frames/:logFileId',
+                    (req, res, next) =>
+                    {
+                        console.log("*** GET /extract_secured_mac_frames/:logFileId");
+                        var logFileId = Number.parseInt(req.params['logFileId']);
+                        var result_log = "";
+                        var activeKeys = new Object;
+                        var k_mac_ecu = "Not Set !";
+                        var k_master_ecu = "Not Set !";
+                        keystoredb.get(
+			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+			    (err, key) =>
+			    {
+                                if (key != undefined)
+                                {
+				    console.log("Active K_MAC_ECU = " + key.MacEcu);
+				    k_mac_ecu = key.MacEcu;
+				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+				    k_master_ecu = key.MasterEcu;
+                                }
+                                activeKeys['kMacEcu'] = k_mac_ecu;
+                                activeKeys['kMasterEcu'] = k_master_ecu;
+                                console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+                                console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+
+                                var renderParams = 
+                                    {
+                                        title: 'Extract secured MAC frames',
+                                        help: 'Extract secured MAC frames from a selected log file in DB',
+					logFileID: logFileId,
+					status: "",
+                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                        accordionTab: 1
+                                    };
+                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE id = ?";
+                                keystoredb.get(
+                                    stmt,
+                                    [logFileId],
+                                    (err, row) =>
+                                    {
+                                        if (err || row === undefined)
+                                        {
+                                            next(err);
+                                            return;
+                                        }
+                                        // For the found log file
+					if (row.Content == undefined)
+					{
+					    console.log("row = " + row.Content);
+					    next("Couldn't get log file content from DB");
+					    return;
+					}
+                                        var lines = row.Content.split(/\r?\n/);
+                                        console.log('==============================================================');
+                                        console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
+                                        result_log += "==============================================================\\n";
+                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+                                        var frameRE = /^ (?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+) ?(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
+                                        var frames = new Array;
+                                        for (var i = 0; i < lines.length; i++)
+                                        {
+                                            console.log("Line #"+i+" processing ...");
+                                            var fields;
+                                            if ((fields = frameRE.exec(lines[i])))
+                                            {
+                                                console.log("Found frame at line #" + i);
+                                                result_log += "Found frame at line #" + i + "\\n";
+                                                var tstamp = fields.groups.Timestamp;
+                                                var id = fields.groups.id;
+                                                var name = fields.groups.name;
+                                                var payload = fields.groups.payload;
+                                                var tmac = fields.groups.tmac;
+                                                console.log("tstamp = " + tstamp);
+                                                console.log("id = " + id);
+                                                console.log("name = " + name);
+                                                console.log("payload = " + payload);
+                                                console.log("tmac = " + tmac);
+                                                frames.push({index:i});
+                                            }
+                                        }
+                                        
+                                    }
+                                );
+                                renderParams['result_log'] = result_log;
+                                renderParams['status'] =
+                                    " Secured frames extracted from log file with id = " + logFileId +
+                                    "! Processing log is here after:";
+                                res.render(
+                                    'extract_mac_frames',
+                                    renderParams
+                                );
+                            }
+                        );
+                    }
+                );
+                        
                 /* GET extract_mac_frames. */
                 router.get(
                     '/extract_mac_frames/:logFileId',
@@ -526,7 +625,6 @@ var keystoredb =
                                     [logFileID],
                                     (err, rows) =>
                                     {
-                                        var result_log = "";
                                         // Examples of logging entries in log files
                                         //
                                         //   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c

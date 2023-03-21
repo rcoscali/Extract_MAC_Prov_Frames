@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS "LogFiles" (
 	"Size"	INTEGER DEFAULT 0,
 	"Content"	BLOB,
 	"FramesExtracted"	BOOLEAN NOT NULL DEFAULT 0,
+	"SecuredFramesExtracted" BOOLEAN NOT NULL DEFAULT 0,
 	UNIQUE("id"),
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
