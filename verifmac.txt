@@ -1,0 +1,44 @@
+
+401.085025 CANFD   3 Rx
+
+Id trame: 698
+nom: FVSyncFrame_PWT_FD
+DLC : 16
+Full arc emission: 74 01 00 c8 96 c2
+pad: 00 00
+tMAC: f0 20 e1 ad 45 ab 73 a6
+Calc MAC: 0+id + full FV + pad
+
+id: 6e4
+nom: FVReSyncFrame_ADAS_FD
+DLC: 48
+tab FV rx:
+  74 01 00 b9 e2 c7
+  00 00 00 67 45 75
+  00 00 05 d4 bd c6
+  00 00 09 48 2e a7
+  00 00 00 00 00 40
+  00 00 11 99 8d 8b
+pad: 00 00 00 00
+tMAC: 0d 1e 85 e5 be d2 a8 03
+Calc MAC: 0+id + full FV + pad
+
+id: 453
+nom: USM_A101SC_FD
+DLC: 24
+frame payload: 00 04 53 08 f1 17 15 67 a0 2a f6
+pad: 00 00 00
+LSB: be 4e
+tMAC:bf e3 36 86 bb 73 c7 31
+
+Trouver domain master ECU
+Trouve Sync précédent cette trame pour le domain master
+
+401.109254 CANFD   3 Rx        697  FVSyncFrame_BCM_FD               1 0 a
+DLC: 16
+MSB: 00 00 05 d4
+bd c9 00 00 99 95 50 8e 28 59 98 46
+
+MSB + LSB trame => Full FV
+
+calc MAC: 0+id + payload trame + Full FV
