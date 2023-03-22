@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS "SecuredFrames" (
 	"tMAC"	TEXT,
 	"Payload"	TEXT,
 	"FV"	TEXT,
-	"Lsb"	TEXT,
 	"Pad"	TEXT,
+        "Mac"   TEXT DEFAULT 'unknown' NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT),
 	UNIQUE("id")
 );
@@ -77,22 +77,23 @@ CREATE TABLE IF NOT EXISTS "ECUs" (
 	PRIMARY KEY("id" AUTOINCREMENT),
 	UNIQUE("id")
 );
-INSERT INTO "ECUs" ("id","Name","IsDomainMaster","DomainMasterId") VALUES (1,'ADAS',1,0),
+INSERT INTO "ECUs" ("id","Name","IsDomainMaster","DomainMasterId") VALUES (1,'ADAS',1,1),
  (2,'FRCAMERA',0,1),
  (3,'SONAR',0,1),
  (4,'ACU',0,5),
- (5,'BCM',1,0),
+ (5,'BCM',1,5),
  (6,'BMS12V',0,5),
  (7,'HFM',0,5),
  (8,'HVAC',0,5),
  (9,'METER',0,5),
  (10,'USM',0,5),
- (11,'CDM',1,0),
+ (11,'CDM',1,11),
  (12,'EPKB',0,11),
  (13,'EPS',0,11),
  (14,'STRG',0,11),
  (15,'VDC',0,11),
  (16,'ATCU',0,17),
- (17,'ECM',1,0),
- (18,'HEVC',1,0);
+ (17,'ECM',1,17),
+ (18,'PWT',1,17),
+ (19,'HEVC',1,19);
 COMMIT;
