@@ -1182,7 +1182,7 @@ var keystoredb =
                                         for (var i = 0; i < lines.length; i++)
                                         {
                                             var fields;
-                                            if ((fields = frameRE.exec(lines[i])))
+                                            if ((fields = frameRE.exec(lines[i])) != null)
                                             {
                                                 result_log += " - Found frame at line #" + i + "\\n";
                                                 var tstamp = fields.groups.Timestamp;
@@ -1209,7 +1209,7 @@ var keystoredb =
                                                 }
                                                 keystoredb.run(
                                                     stmt,
-                                                    [name, tstamp, fid, tmac, payload, lsb, pad]
+                                                    [name, tstamp, '0x'+fid, tmac, payload, lsb, pad]
                                                 );
                                             }
                                         }
@@ -1346,6 +1346,64 @@ var keystoredb =
                     }
                 );
                         
+                /* ========================================================================================================================= */
+                /* GET /compute_secured_mac_frames.                                                                                          */
+                /* ========================================================================================================================= */
+                router.get(
+                    '/compute_secured_frames_mac',
+                    (req, res, next) =>
+                    {
+                        console.log("*** GET /compute_secured_frames_mac");
+                        var result_log = "";
+                        var activeKeys = new Object;
+                        var k_mac_ecu = "Not Set !";
+                        var k_master_ecu = "Not Set !";
+                        keystoredb.get(
+			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+			    (err, key) =>
+			    {
+                                if (key != undefined)
+                                {
+				    console.log("Active K_MAC_ECU = " + key.MacEcu);
+				    k_mac_ecu = key.MacEcu;
+				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+				    k_master_ecu = key.MasterEcu;
+                                }
+                                activeKeys['kMacEcu'] = k_mac_ecu;
+                                activeKeys['kMasterEcu'] = k_master_ecu;
+                                console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+                                console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+
+                                var renderParams = 
+                                    {
+                                        title: 'Compute secured frames MAC',
+                                        help: 'Compute MAC for secured frames in DB',
+					status: "",
+                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                        accordionTab: 2
+                                    };
+                                var stmt = "SELECT id, Name, TimeStamp, FrameId, tMAC, Payload, FV, Lsb, Pad FROM SecuredFrames";
+                                keystoredb.all(
+                                    stmt,
+                                    [],
+                                    (err, rows) =>
+                                    {
+                                        
+                                    }
+                                );
+                            }
+                        );
+                        renderParams['result_log'] = result_log;
+                        renderParams['status'] =
+                            " Secured frames extracted from log file with id = " + logFileId +
+                            "! Processing log is here after:";
+                        res.render(
+                            'extract_mac_frames',
+                            renderParams
+                        );
+                    }
+                );
+
                 /*
                  * ========================================================================================================================= *
                  *                                                                                                                           *
