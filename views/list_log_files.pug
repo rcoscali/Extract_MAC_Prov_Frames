@@ -35,24 +35,47 @@ block content
               Frames
               Extracted
   script(type="text/javascript")
+    | // Data provided by Express to Pug
     | var log_files_tbl = #{logfiles};
     | var logFilesTbl = document.getElementById('log_files_tbl');
     | var active_keys = #{activeKeys};
+    |
+    | /*
+    |  * Event handler for checkboxes (onclick)
+    |  */
+    | // Event handler for checkbox allowing to process secured frames
     | function onSecuredFrameExtract(i)
     | {
-    |    var url = '/extract_secured_mac_frames/' + log_files_tbl[i]['id'];
-    |    document.location.href = url;
+    |    document.location.href = '/extract_secured_mac_frames/' + log_files_tbl[i]['id'];
     | }
+    | // Event handler for checkbox allowing to process provisionning frames
+    | function onProvFrameExtract(i)
+    | {
+    |    document.location.href = '/extract_mac_frames/' + log_files_tbl[i]['id'];
+    | }
+    | function onListSecuredFrame(i)
+    | {
+    |    document.location.href = '/list_mac_prov_frame/' + log_files_tbl[i]['id'];
+    | }
+    | // Event handler for checkbox allowing to process provisionning frames
+    | function onListProvFrame(i)
+    | {
+    |    document.location.href = '/list_secured_frames/' + log_files_tbl[i]['id'];
+    | }
+    | // Event handler for the page onload event (set from the body tag)
     | function localOnLoad()
     | {
     |   for (var i = log_files_tbl.length-1; i >= 0; i--)
     |   {
-    |     var newRow = logFilesTbl.insertRow(1); /* Add  a row for this log file */
+    |     /* Add a row in the table for this log file */
+    |     var newRow = logFilesTbl.insertRow(1); 
     |     // Add a column for the Name of the log file
     |     var newCell = newRow.insertCell(0);
     |     // Create a link
     |     var link = document.createElement("a");
+    |     // Create href attribute
     |     var href = document.createAttribute("href");
+    |     // Set href value
     |     href.value = (log_files_tbl[i]['FramesExtracted'] ? '/list_mac_prov_frame/' : '/extract_mac_frames/') + log_files_tbl[i]['id'];
     |     link.setAttributeNode(href);
     |     link.innerHTML = log_files_tbl[i]['Name'];
@@ -77,7 +100,27 @@ block content
     |     newCell.innerHTML = log_files_tbl[i]['UUID'];
     |     // Add a column for the FramesExtracted of the log file
     |     newCell = newRow.insertCell(7);
-    |     newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked" readonly'+(log_files_tbl[i]['FramesExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
+    |     var inputelem = document.createElement("input"); 
+    |     var typeatttr = document.createAttribute("type");
+    |     typeatttr.value = "checkbox";
+    |     inputelem.setAttributeNode(typeatttr);
+    |     if (log_files_tbl[i]['FramesExtracted'])
+    |     {
+    |       var checkedattr = document.createAttribute("checked");
+    |       inputelem.setAttributeNode(checkedattr);
+    |       var roattr = document.createAttribute("readonly");
+    |       inputelem.setAttributeNode(roattr);
+    |       var onclickattr = document.createAttribute("onclick");
+    |       onclickattr.value = "this.checked=!this.checked; onListProvFrame(" + i + ")";
+    |       inputelem.setAttributeNode(onclickattr);
+    |     }
+    |     else
+    |     {
+    |       var onclickattr = document.createAttribute("onclick");
+    |       onclickattr.value = "onProvFrameExtract(" + i +")";
+    |       inputelem.setAttributeNode(onclickattr);
+    |     }
+    |     newCell.appendChild(inputelem);
     |     // Add a column for the FramesExtracted of the log file
     |     newCell = newRow.insertCell(8);
     |     var inputelem = document.createElement("input"); 
@@ -91,7 +134,7 @@ block content
     |       var roattr = document.createAttribute("readonly");
     |       inputelem.setAttributeNode(roattr);
     |       var onclickattr = document.createAttribute("onclick");
-    |       onclickattr.value = "this.checked=!this.checked";
+    |       onclickattr.value = "this.checked=!this.checked; onListSecuredFrame(" + i + ")";
     |       inputelem.setAttributeNode(onclickattr);
     |     }
     |     else
@@ -100,8 +143,7 @@ block content
     |       onclickattr.value = "onSecuredFrameExtract(" + i +")";
     |       inputelem.setAttributeNode(onclickattr);
     |     }
-    |     
-    |     newCell.innerHTML = inputelem.outerHTML;
+    |     newCell.appendChild(inputelem);
     |   }
     |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
     |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
