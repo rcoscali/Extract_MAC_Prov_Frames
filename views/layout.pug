@@ -53,20 +53,20 @@ html(lang="fr")
                       a(href='/extract_mac_frames')
                         | Extract and import MAC prov. frames from stored log file
                       br
-                      a(href='/extract_secured_mac_frames')
-                        | Extract and import secured MAC frames from stored log file
-                      br
                       a(href='/list_mac_prov_frame')
                         | List MAC prov frames
                       br
                     h3
                       |  Secured MAC frames 
                     p
-                      a(href='/compute_secured_frames_mac')
-                        | Compute MAC for secured frames
+                      a(href='/extract_secured_mac_frames')
+                        | Extract and import secured MAC frames from stored log file
                       br
-                      a(href='/list_mac_prov_frame')
-                        | List MAC prov frames
+                      a(href='/compute_secured_frames_mac')
+                        | Compute/verify MAC for secured frames stored in DB
+                      br
+                      a(href='/list_secured_frame')
+                        | List frames secured by MAC stored in DB
                       br
                     h3
                       |  SHE commands args (M1-M5) 
