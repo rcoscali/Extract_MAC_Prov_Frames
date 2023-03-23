@@ -97,13 +97,13 @@ var keystoredb =
                 /* GET home page. */
                 /* ========================================================================================================================= */
                 router.get(
-                    '/:filename',
+                    '/favicon.ico',
                     (req, res, next) =>
                     {
                         console.log("*** GET /favicon.ico");
                         var faviconOptions =
                             {
-                                'root': path.join(process.env.MAC_PROV_ROOT, 'public/images'),
+                                'root': path.join(process.env.MAC_PROV_ROOT, '/public/images'),
                                 'dotfiles': 'deny',
                                 //'acceptRanges': false,
                                 'headers' :
