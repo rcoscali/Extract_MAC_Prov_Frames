@@ -88,6 +88,44 @@ var keystoredb =
                 );
                 
                 /* ========================================================================================================================= */
+                /* GET home page. */
+                /* ========================================================================================================================= */
+                router.get(
+                    '/:filename',
+                    (req, res, next) =>
+                    {
+                        console.log("*** GET /favicon.ico");
+                        var faviconOptions =
+                            {
+                                'root': path.join(process.env.MAC_PROV_ROOT, 'public'),
+                                'dotfiles': 'deny',
+                                //'acceptRanges': false,
+                                'headers' :
+                                {                                    
+                                    'Content-Type': 'image/x-icon',
+                                    'Content-Length': data.length,
+                                    'X-Timestamp': Date.now(),
+                                    'X-Sent': true
+                                },
+                                'immutable': true
+                            };
+
+                        res.sendFile(
+                            req.params.name,
+                            faviconOptions,
+                            (err) =>
+                            {
+                                if (err)
+                                {
+                                    next(err);
+                                    return;
+                                }
+                            }
+                        );
+                    }
+                );
+                
+                /* ========================================================================================================================= */
                 /* GET /activate_keys/:kMacEcu/:kMasterEcu                                                                                   */
                 /* ========================================================================================================================= */
                 router.get(
