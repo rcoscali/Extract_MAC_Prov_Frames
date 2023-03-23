@@ -49,100 +49,100 @@ var keystoredb =
                 /* GET home page. */
                 /* ========================================================================================================================= */
                 router.get(
-		    '/',
-		    (req, res, next) =>
-		    {
+                    '/',
+                    (req, res, next) =>
+                    {
                         console.log("*** GET /");
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
                                 var renderParams =
-				    {
+                                    {
                                         title: 'MAC Prov Tool',
                                         help: 'Tools for manipulating MAC keys, MAC provisionning CAN frames and SHE commands for Key provisionning from log files ',
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 0
-				    }
+                                    }
                                 res.render(
-				    'index',
-				    renderParams
+                                    'index',
+                                    renderParams
                                 );
-			    }
+                            }
                         );
-		    }
+                    }
                 );
                 
                 /* ========================================================================================================================= */
                 /* GET /activate_keys/:kMacEcu/:kMasterEcu                                                                                   */
                 /* ========================================================================================================================= */
                 router.get(
-		    '/activate_keys/:kMacEcu/:kMasterEcu',
-		    function(req, res, next)
-		    {
+                    '/activate_keys/:kMacEcu/:kMasterEcu',
+                    function(req, res, next)
+                    {
                         console.log("*** GET /activate_keys/:kMacEcu/:kMasterEcu");
                         var kMacEcu = req.params['kMacEcu'];
                         var kMasterEcu = req.params['kMasterEcu'];
-			var activeKeys = new Object;
-			activeKeys['kMacEcu'] = kMacEcu;
-			activeKeys['kMasterEcu'] = kMasterEcu;
+                        var activeKeys = new Object;
+                        activeKeys['kMacEcu'] = kMacEcu;
+                        activeKeys['kMasterEcu'] = kMasterEcu;
                         console.log("K_MAC_ECU = " + kMacEcu);
                         console.log("K_MASTER_ECU = " + kMasterEcu);
                         keystoredb.serialize(
-			    () =>
-			    {
+                            () =>
+                            {
                                 keystoredb.get(
-				    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-				    [kMacEcu],
-				    (err, row) =>
-				    {
-					console.log("=> row = " + row);
-					if (row != undefined)
-					{
-					    console.log("=> 2");
-					    keystoredb.run(
-						"DELETE FROM ActiveKeys",
-						[]
-					    );
-					}
-					else
-					{
-					    console.log("=> 4");
-					    keystoredb.run(
-						"INSERT INTO ActiveKeys (MacEcu, MasterEcu) VALUES (?, ?)",
-						[kMacEcu, kMasterEcu],
-					    );
-					}
-				    }
-				);
-			    }
+                                    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                                    [kMacEcu],
+                                    (err, row) =>
+                                    {
+                                        console.log("=> row = " + row);
+                                        if (row != undefined)
+                                        {
+                                            console.log("=> 2");
+                                            keystoredb.run(
+                                                "DELETE FROM ActiveKeys",
+                                                []
+                                            );
+                                        }
+                                        else
+                                        {
+                                            console.log("=> 4");
+                                            keystoredb.run(
+                                                "INSERT INTO ActiveKeys (MacEcu, MasterEcu) VALUES (?, ?)",
+                                                [kMacEcu, kMasterEcu],
+                                            );
+                                        }
+                                    }
+                                );
+                            }
                         );
                         res.render(
-			    'index',
-			    {
+                            'index',
+                            {
                                 title: 'MAC Prov Tool',
                                 help: 'Tools for manipulating MAC keys, MAC provisionning CAN frames and SHE commands for Key provisionning from log files ',
                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                 accordionTab: 0
-			    }
+                            }
                         );                                      
-		    }
+                    }
                 );
-		
+                
                 /* ========================================================================================================================= */
                 /* GET /set_mac_keys                                                                                                         */
                 /* ========================================================================================================================= */
@@ -155,15 +155,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -193,7 +193,7 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.run(
-			    "DELETE FROM ActiveKeys"
+                            "DELETE FROM ActiveKeys"
                         );
                         
                         activeKeys['kMacEcu'] = k_mac_ecu;
@@ -232,15 +232,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, row) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, row) =>
+                            {
                                 if (row != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + row.MacEcu);
-				    k_mac_ecu = row.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + row.MasterEcu);
-				    k_master_ecu = row.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + row.MacEcu);
+                                    k_mac_ecu = row.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + row.MasterEcu);
+                                    k_master_ecu = row.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -275,15 +275,15 @@ var keystoredb =
                             var k_mac_ecu = "Not Set !";
                             var k_master_ecu = "Not Set !";
                             keystoredb.get(
-				"SELECT MacEcu, MasterEcu FROM ActiveKeys",
-				(err, key) =>
-				{
+                                "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                                (err, key) =>
+                                {
                                     if (key != undefined)
                                     {
-					console.log("Active K_MAC_ECU = " + key.MacEcu);
-					k_mac_ecu = key.MacEcu;
-					console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-					k_master_ecu = key.MasterEcu;
+                                        console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                        k_mac_ecu = key.MacEcu;
+                                        console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                        k_master_ecu = key.MasterEcu;
                                     }
                                     activeKeys['kMacEcu'] = k_mac_ecu;
                                     activeKeys['kMasterEcu'] = k_master_ecu;
@@ -438,15 +438,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -519,15 +519,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -599,15 +599,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -616,13 +616,13 @@ var keystoredb =
 
                                 // Select log file with id :logFileId with FramesExtracted flag being false
                                 // Initialization of parameters for rendering the page
-				var logFileID = req.params['logFileId'];
+                                var logFileID = req.params['logFileId'];
                                 var renderParams =
                                     {
                                         title: 'Extract MAC Prov frames',
                                         help: 'Extract MAC Prov frames from a selected log file in DB',
-					logFileID: req.params['logFileId'],
-					status: "",
+                                        logFileID: req.params['logFileId'],
+                                        status: "",
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 1
                                     };
@@ -647,14 +647,14 @@ var keystoredb =
                                         }
                                         var index = 0;
 
-					var row = rows[0];
+                                        var row = rows[0];
                                         // For the found log file
-					if (row.Content == undefined)
-					{
-					    console.log("row = " + row.Content);
-					    next("Couldn't get log file content from DB");
-					    return;
-					}
+                                        if (row.Content == undefined)
+                                        {
+                                            console.log("row = " + row.Content);
+                                            next("Couldn't get log file content from DB");
+                                            return;
+                                        }
                                         var lines = row.Content.split(/\r?\n/);
                                         console.log('==============================================================');
                                         console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
@@ -755,7 +755,7 @@ var keystoredb =
                                                 );
                                             }
                                         );
-				        console.log("** result_log = \"" + result_log + "\"");
+                                        console.log("** result_log = \"" + result_log + "\"");
                                         renderParams['result_log'] = result_log;
                                         renderParams['status'] = "'Frames extracted from log file with id = " + renderParams['logFileID'] + "! Processing log is here after:'";
                                         res.render(
@@ -781,15 +781,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -835,7 +835,7 @@ var keystoredb =
                                         rows.forEach(
                                             (row) =>
                                             {
-						var logFileID = row.id;
+                                                var logFileID = row.id;
                                                 var lines = row.Content.toString().split(/\r?\n/);
                                                 console.log('==============================================================');
                                                 console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
@@ -963,15 +963,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -1038,15 +1038,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys ORDER BY id",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys ORDER BY id",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -1120,19 +1120,20 @@ var keystoredb =
                         console.log("*** GET /extract_secured_mac_frames/:logFileId");
                         var logFileId = Number.parseInt(req.params['logFileId']);
                         var result_log = "";
+                        var oneline_result_log = "";
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -1143,8 +1144,8 @@ var keystoredb =
                                     {
                                         title: 'Extract secured MAC frames',
                                         help: 'Extract secured MAC frames from a selected log file in DB',
-					logFileID: logFileId,
-					status: "",
+                                        logFileID: logFileId,
+                                        status: "",
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
@@ -1160,11 +1161,11 @@ var keystoredb =
                                             return;
                                         }
                                         // For the found log file
-					if (row.Content == undefined)
-					{
-					    next("Couldn't get log file content from DB");
-					    return;
-					}
+                                        if (row.Content == undefined)
+                                        {
+                                            next("Couldn't get log file content from DB");
+                                            return;
+                                        }
                                         // Update LogFiles table for avoiding several extract
                                         var updateStmt = "UPDATE LogFiles SET SecuredFramesExtracted='1' WHERE LogFiles.id=?";
                                         keystoredb.run(
@@ -1174,42 +1175,120 @@ var keystoredb =
                                         var lines = row.Content.split(/\r?\n/);
                                         console.log('==============================================================');
                                         console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
-                                        result_log += "==============================================================\\n";
-                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                        var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<lsb>([0-9a-fA-F]{2} ){2})(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
+                                        oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+                                        var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                         var frames = new Array;
-                                        var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, tMAC, Payload, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                                        var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                                         for (var i = 0; i < lines.length; i++)
                                         {
                                             var fields;
-                                            if ((fields = frameRE.exec(lines[i])) != null)
+                                            if ((fields = frameRE.exec(lines[i])))
                                             {
-                                                result_log += " - Found frame at line #" + i + "\\n";
+                                                // Found a frame => parsing it
+                                                oneline_result_log += " - line #" + i + ": ";
+                                                // TimeStamp (ex.: 123.654352)
                                                 var tstamp = fields.groups.Timestamp;
+                                                // Frame ID (ex.: 6e3)
                                                 var fid = fields.groups.id;
+                                                // Frame Name
                                                 var name = fields.groups.name;
+                                                // Payload of the frame
                                                 var payload = fields.groups.payload;
-                                                var lsb = fields.groups.lsb.trim();
-                                                var tmac = fields.groups.tmac.trim();
-                                                result_log += "   = tstamp = '" + tstamp + "'";
-                                                result_log += " id = '" + fid + "'";
-                                                result_log += " name = '" + name + "'";
-                                                result_log += " lsb = '" + lsb + "'";
-                                                result_log += " tmac = '" + tmac + "'";
-                                                var padRE = /((?<pad>00) )+$/;
+                                                // Height MSBytes of the last AES-cmac block (MAC authentication tag)
+                                                var tmac = fields.groups.tmac.trim().replace(/ /g, '');
+                                                // Log these to page log textarea
+                                                oneline_result_log += "   = tstamp = '" + tstamp + "'";
+                                                oneline_result_log += " id = '" + fid + "'";
+                                                oneline_result_log += " name = '" + name + "'";
+                                                oneline_result_log += " tmac = '" + tmac + "'";
+                                                // Extracting lsb from payload
+                                                var lsbRE = /(?<lsb>([a-fA-F0-9]{2}) ?){2}$/;
+                                                var lsb = "";
+                                                if ((fields = lsbRE.exec(payload)) != null)
+                                                {
+                                                    lsb = payload.substring(fields.index).replace(/ /g, '').trim();
+                                                    payload = payload.substring(0, fields.index).trim();
+                                                }
+                                                // Extracting padding from payload
+                                                var padRE = /(?<pad>00 ?){0,15}$/;
                                                 var pad = "";
                                                 if ((fields = padRE.exec(payload)) != null)
                                                 {
-                                                    fields = padRE.exec(payload);
-                                                    pad = payload.substring(fields.index).trim();
-                                                    payload = payload.substring(0, fields.index-1);
-                                                    result_log += " pad = '" + pad + "'";
-                                                    result_log += " payload = '" + payload + "'";
-                                                    result_log += "\\n";
+                                                    pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                    payload = payload.substring(0, fields.index).trim();
                                                 }
+                                                // Processing payload for extracting FVs
+                                                //  - FVs from Sync frames is the full ARC (6 bytes)
+                                                //  - FVs from ReSync frames if a table of full Rx ARC for every ECU
+                                                //  - For SC_FD frames, no Full FV, only 2 bytes LSBytes
+                                                var resyncRE = /^FVReSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                var syncRE = /^FVSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                var scfdRE = /^(?<ecu>[A-Za-z0-9]+)_.*/;
+                                                var fv = "";
+                                                var dlc = "";
+                                                var msb = "";
+                                                var lsb = "";
+                                                var ecuName = "";
+                                                var ecuFields;
+                                                // Sync frame
+                                                if ((ecuFields = syncRE.exec(name)) != null)
+                                                {
+                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
+                                                    ecuName = ecuFields.groups.ecu;
+                                                    console.log("get FV for Sync frame: payload = " + payload);
+                                                    if ((fields = fvRE.exec(payload)) != null)
+                                                    {
+                                                        dlc = fields.groups.dlc;
+                                                        fv = fields.groups.fv.replace(/ /g, '');
+                                                        msb = fv.substring(0, 7).replace(/ /g, '');
+                                                        lsb = fv.substring(8, 11).replace(/ /g, '');
+                                                        payload = '';
+                                                    }
+                                                    else
+                                                        throw 'RegEx error for getting FV from Sync frame !';
+                                                }
+                                                // ReSync frame
+                                                else if ((ecuFields = resyncRE.exec(name)) != null)
+                                                {
+                                                    ecuName = ecuFields.groups.ecu;
+                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
+                                                    console.log("get FV for ReSync frame: payload = " + payload);
+                                                    if ((fields = fvRE.exec(payload)) != null)
+                                                    {
+                                                        dlc = fields.groups.dlc;
+                                                        fv = fields.groups.fvstbl.replace(/ /g, '');
+                                                        payload = '';
+                                                    }
+                                                    else
+                                                        throw 'RegEx error for getting FVs from ReSync frame !';
+                                                }
+                                                // SC_FD frame
+                                                else if ((ecuFields = scfdRE.exec(name)) != null)
+                                                {
+                                                    ecuName = ecuFields.groups.ecu;
+                                                    var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
+                                                    if ((fields = scfdRE.exec(payload)) != null)
+                                                    {
+                                                        dlc = fields.groups.dlc;
+                                                        payload = fields.groups.payload.replace(/ /g, '');
+                                                    }
+                                                    else
+                                                        throw 'RegEx error for getting payload from SC_FD frame !';
+                                                }
+                                                oneline_result_log += " dlc = '" + dlc + "'";
+                                                oneline_result_log += " payload = '" + payload + "'";
+                                                oneline_result_log += " fv = '" + fv + "'";
+                                                oneline_result_log += " lsb = '" + lsb + "'";
+                                                oneline_result_log += " msb = '" + msb + "'";
+                                                oneline_result_log += " pad = '" + pad + "'";
+                                                oneline_result_log += " ECUname = '" + ecuName + "'";
+                                                oneline_result_log += "\\n";
+                                                result_log += oneline_result_log,
+                                                //console.log(oneline_result_log);
+                                                oneline_result_log = "";                                                
                                                 keystoredb.run(
                                                     stmt,
-                                                    [name, tstamp, '0x'+fid, tmac, payload, lsb, pad]
+                                                    [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
                                                 );
                                             }
                                         }
@@ -1236,21 +1315,21 @@ var keystoredb =
                     (req, res, next) =>
                     {
                         console.log("*** GET /extract_secured_mac_frames");
-                        var logFileId = Number.parseInt(req.params['logFileId']);
                         var result_log = "";
+                        var oneline_result_log = "";
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -1261,91 +1340,301 @@ var keystoredb =
                                     {
                                         title: 'Extract secured MAC frames',
                                         help: 'Extract secured MAC frames from a selected log file in DB',
-					logFileID: logFileId,
-					status: "",
+                                        status: "",
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
-                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE id = ?";
-                                keystoredb.get(
+                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE SecuredFramesExtracted = 0";
+                                keystoredb.all(
                                     stmt,
-                                    [logFileId],
-                                    (err, row) =>
+                                    [],
+                                    (err, rows) =>
                                     {
-                                        if (err || row === undefined)
+                                        if (rows.length == 0)
                                         {
-                                            next(err);
+                                            next('No log file found !');
                                             return;
                                         }
-                                        // For the found log file
-					if (row.Content == undefined)
-					{
-					    next("Couldn't get log file content from DB");
-					    return;
-					}
-                                        // Update LogFiles table for avoiding several extract
-                                        var updateStmt = "UPDATE LogFiles SET SecuredFramesExtracted='1' WHERE LogFiles.id=?";
-                                        keystoredb.run(
-                                            updateStmt,
-                                            [logFileId]
-                                        );
-                                        var lines = row.Content.split(/\r?\n/);
-                                        console.log('==============================================================');
-                                        console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
-                                        result_log += "==============================================================\\n";
-                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                        var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<lsb>([0-9a-fA-F]{2} ){2})(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
-                                        var frames = new Array;
-                                        var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, tMAC, Payload, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?)";
-                                        for (var i = 0; i < lines.length; i++)
-                                        {
-                                            var fields;
-                                            if ((fields = frameRE.exec(lines[i])))
+
+                                        rows.forEach(
+                                            (row, rowix) => 
                                             {
-                                                result_log += " - Found frame at line #" + i + "\\n";
-                                                var tstamp = fields.groups.Timestamp;
-                                                var fid = fields.groups.id;
-                                                var name = fields.groups.name;
-                                                var payload = fields.groups.payload;
-                                                var lsb = fields.groups.lsb.trim();
-                                                var tmac = fields.groups.tmac.trim();
-                                                result_log += "   = tstamp = '" + tstamp + "'";
-                                                result_log += " id = '" + fid + "'";
-                                                result_log += " name = '" + name + "'";
-                                                result_log += " lsb = '" + lsb + "'";
-                                                result_log += " tmac = '" + tmac + "'";
-                                                var padRE = /((?<pad>00) )+$/;
-                                                var pad = "";
-                                                if ((fields = padRE.exec(payload)) != null)
+                                                // For the found log file
+                                                if (row.Content == undefined)
                                                 {
-                                                    fields = padRE.exec(payload);
-                                                    pad = payload.substring(fields.index).trim();
-                                                    payload = payload.substring(0, fields.index-1);
-                                                    result_log += " pad = '" + pad + "'";
-                                                    result_log += " payload = '" + payload + "'";
-                                                    result_log += "\\n";
+                                                    next("Couldn't get log file content from DB");
+                                                    return;
                                                 }
+                                                // Update LogFiles table for avoiding several extract
+                                                var updateStmt = "UPDATE LogFiles SET SecuredFramesExtracted='1' WHERE LogFiles.id=?";
                                                 keystoredb.run(
-                                                    stmt,
-                                                    [name, tstamp, fid, tmac, payload, lsb, pad]
+                                                    updateStmt,
+                                                    [row.id]
                                                 );
+                                                var lines = row.Content.split(/\r?\n/);
+                                                console.log('==============================================================');
+                                                console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
+                                                oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+                                                var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
+                                                var frames = new Array;
+                                                var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                                for (var i = 0; i < lines.length; i++)
+                                                {
+                                                    var fields;
+                                                    if ((fields = frameRE.exec(lines[i])))
+                                                    {
+                                                        // Found a frame => parsing it
+                                                        oneline_result_log += " - line #" + i + ": ";
+                                                        // TimeStamp (ex.: 123.654352)
+                                                        var tstamp = fields.groups.Timestamp;
+                                                        // Frame ID (ex.: 6e3)
+                                                        var fid = fields.groups.id;
+                                                        // Frame Name
+                                                        var name = fields.groups.name;
+                                                        // Payload of the frame
+                                                        var payload = fields.groups.payload;
+                                                        // Height MSBytes of the last AES-cmac block (MAC authentication tag)
+                                                        var tmac = fields.groups.tmac.trim().replace(/ /g, '');
+                                                        // Log these to page log textarea
+                                                        oneline_result_log += "   = tstamp = '" + tstamp + "'";
+                                                        oneline_result_log += " id = '" + fid + "'";
+                                                        oneline_result_log += " name = '" + name + "'";
+                                                        oneline_result_log += " tmac = '" + tmac + "'";
+                                                        // Extracting lsb from payload
+                                                        var lsbRE = /(?<lsb>([a-fA-F0-9]{2}) ?){2}$/;
+                                                        var lsb = "";
+                                                        if ((fields = lsbRE.exec(payload)) != null)
+                                                        {
+                                                            lsb = payload.substring(fields.index).replace(/ /g, '');
+                                                            payload = payload.substring(0, fields.index-1).trim();
+                                                            oneline_result_log += " lsb = '" + lsb + "'";
+                                                        }
+                                                        // Extracting padding from payload
+                                                        var padRE = /(?<pad>(00) )+$/;
+                                                        var pad = "";
+                                                        if ((fields = padRE.exec(payload)) != null)
+                                                        {
+                                                            pad = payload.substring(fields.index).replace(/ /g, '');
+                                                            payload = payload.substring(0, fields.index-1).trim();
+                                                            oneline_result_log += " pad = '" + pad + "'";
+                                                        }
+                                                        // Processing payload for extracting FVs
+                                                        //  - FVs from Sync frames is the full ARC (6 bytes)
+                                                        //  - FVs from ReSync frames if a table of full Rx ARC for every ECU
+                                                        //  - For SC_FD frames, no Full FV, only 2 bytes LSBytes
+                                                        var resyncRE = /^FVReSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                        var syncRE = /^FVSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                        var scfdRE = /^(?<ecu>[A-Za-z0-9]+)_.*/;
+                                                        var fv = "";
+                                                        var dlc = "";
+                                                        var msb = "";
+                                                        var lsb = "";
+                                                        var ecuName = "";
+                                                        var ecuFields;
+                                                        // Sync frame
+                                                        if ((ecuFields = syncRE.exec(name)) != null)
+                                                        {
+                                                            ecuName = ecuFields.groups.ecu;
+                                                            var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
+                                                            console.log("get FV for Sync frame: payload = " + payload);
+                                                            if ((fields = fvRE.exec(payload)) != null)
+                                                            {
+                                                                dlc = fields.groups.dlc;
+                                                                fv = fields.groups.fv.replace(/ /g, '');
+                                                                msb = fv.substring(0, 7).replace(/ /g, '');
+                                                                lsb = fv.substring(8, 11).replace(/ /g, '');
+                                                                payload = '';
+                                                            }
+                                                            else
+                                                                throw 'RegEx error for getting FV from Sync frame !';
+                                                        }
+                                                        // ReSync frame
+                                                        else if ((ecuFields = resyncRE.exec(name)) != null)
+                                                        {
+                                                            ecuName = ecuFields.groups.ecu;
+                                                            var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
+                                                            console.log("get FV for ReSync frame: payload = " + payload);
+                                                            if ((fields = fvRE.exec(payload)) != null)
+                                                            {
+                                                                dlc = fields.groups.dlc;
+                                                                fv = fields.groups.fvstbl.replace(/ /g, '');
+                                                                payload = '';
+                                                            }
+                                                            else
+                                                                throw 'RegEx error for getting FVs from ReSync frame !';
+                                                        }
+                                                        // SC_FD frame
+                                                        else if ((ecuFields = scfdRE.exec(name)) != null)
+                                                        {
+                                                            ecuName = ecuFields.groups.ecu;
+                                                            var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
+                                                            if ((fields = scfdRE.exec(payload)) != null)
+                                                            {
+                                                                dlc = fields.groups.dlc;
+                                                                payload = fields.groups.payload.replace(/ /g, '');
+                                                            }
+                                                            else
+                                                                throw 'RegEx error for getting payload from SC_FD frame !';
+                                                        }
+                                                        oneline_result_log += " payload = '" + payload + "'";
+                                                        oneline_result_log += " fv = '" + fv + "'";
+                                                        oneline_result_log += " lsb = '" + lsb + "'";
+                                                        oneline_result_log += " msb = '" + msb + "'";
+                                                        oneline_result_log += " pad = '" + pad + "'";
+                                                        oneline_result_log += " ECUname = '" + ecuName + "'";
+                                                        oneline_result_log += "\\n";
+                                                        //console.log(oneline_result_log);
+                                                        result_log += oneline_result_log;
+                                                        oneline_result_log = "";
+                                                        keystoredb.run(
+                                                            stmt,
+                                                            [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
+                                                        );
+                                                    }
+                                                }
+                                                renderParams['result_log'] = result_log;
+                                                renderParams['status'] =
+                                                    " Secured frames extracted from log file with id = " + logFileId +
+                                                    "! Processing log is here after:";
+                                                res.render(
+                                                    'extract_mac_frames',
+                                                    renderParams
+                                                );
+                                                
                                             }
-                                        }
-                                        renderParams['result_log'] = result_log;
-                                        renderParams['status'] =
-                                            " Secured frames extracted from log file with id = " + logFileId +
-                                            "! Processing log is here after:";
-                                        res.render(
-                                            'extract_mac_frames',
-                                            renderParams
-                                        );
+                                        );                                        
                                     }
                                 );
                             }
                         );
                     }
                 );
-                        
+                
+                /* ========================================================================================================================= */
+                /* GET /compute_secured_mac_frames.                                                                                          */
+                /* ========================================================================================================================= */
+                router.get(
+                    '/compute_secured_frames_mac/:frameId',
+                    (req, res, next) =>
+                    {
+                        console.log("*** GET /compute_secured_frames_mac/:frameId");
+                        var frameId = req.params['frameId'];
+                        var result_log = "";
+                        var activeKeys = new Object;
+                        var k_mac_ecu = "Not Set !";
+                        var k_master_ecu = "Not Set !";
+                        keystoredb.get(
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
+                                if (key != undefined)
+                                {
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
+                                }
+                                activeKeys['kMacEcu'] = k_mac_ecu;
+                                activeKeys['kMasterEcu'] = k_master_ecu;
+                                console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+                                console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+
+                                var renderParams = 
+                                    {
+                                        title: 'Compute secured frames MAC',
+                                        help: 'Compute MAC for secured frames in DB',
+                                        status: "",
+                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                        accordionTab: 2
+                                    };
+                                var stmt = "SELECT * FROM SecuredFrames WHERE Mac = 'unknown'";
+                                keystoredb.all(
+                                    stmt,
+                                    [],
+                                    (err, rows) =>
+                                    {
+                                        if (err)
+                                        {
+                                            next(err);
+                                            return;
+                                        }
+                                        rows.forEach(
+                                            (row, ix) =>
+                                            {
+                                                var scfdRegex = /^.*SC_FD.*$/;
+                                                if (scfdRegex.test(row.Name))
+                                                {
+                                                    var ecuRegex = /^(?<ecuName>[A-Za-z0-9]+)_.*$/;
+                                                    fields = ecuRegex.exec(row.Name);
+                                                    var ecuName = fields.groups.ecuName;
+                                                    var stmtDomain =
+                                                        "SELECT DISTINCT ecu.id, ecu.Name, ecu.isDomainMaster, ecu.DomainMasterId, domain.Name as DomainName " +
+                                                        "FROM ECUs as ecu "+
+                                                        "INNER JOIN ECUs as domain ON ecu.DomainMasterId = domain.id "+
+                                                        "WHERE ecu.Name = ?";
+                                                    keystoredb.get(
+                                                        stmtDomain,
+                                                        [ecuName],
+                                                        (err, ecuRow) =>
+                                                        {
+                                                            if (err)
+                                                            {
+                                                                next(err);
+                                                                return;
+                                                            }
+                                                            console.log("domain master ecu = " + ecuRow.DomainName);
+                                                            var syncFrameCntStmt = "SELECT COUNT(*) FROM SecuredFrames WHERE Name LIKE ? ORDER BY TimeStamp DESC LIMIT 1";
+                                                            
+                                                            var syncFrameStmt = "SELECT * FROM SecuredFrames WHERE Name LIKE ? ORDER BY TimeStamp DESC LIMIT 1";
+                                                            keystoredb.run(
+                                                                syncFrameStmt,
+                                                                ['FVSyncFrame_'+ecuRow.DomainName+'_*'],
+                                                                (err, syncRow) =>
+                                                                {
+                                                                    console.log("Domain master Sync frame MSB = " + syncRow.FV);
+                                                                    var bufferKey = Buffer.from(activeKeys['kMacEcu']);
+                                                                    var encshe = new encSHE(row.FrameId, row.Name, row.Payload.substring(1).replace(/ /g, ''), undefined, row.Pad, syncRow.FV);
+                                                                    var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                                                    keystoredb.run(
+                                                                        updStmt,
+                                                                        [(encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO'), row.id]
+                                                                    );
+                                                                }
+                                                            );
+                                                        }
+                                                    );
+                                                    
+                                                }
+                                                else
+                                                {
+                                                    var bufferKey = Buffer.from(activeKeys['kMacEcu']);
+                                                    var encshe = new encSHE(row.FrameId, row.Name, row.FV, row.Payload, row.Pad);
+                                                    var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                                    var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
+                                                    
+                                                    keystoredb.run(
+                                                        updStmt,
+                                                        [macValid, row.id]
+                                                    );
+                                                }
+                                            }
+                                        );
+                                        
+                                    }
+                                );
+                            }
+                        );
+                        renderParams['result_log'] = result_log;
+                        renderParams['status'] =
+                            " Secured frames extracted from log file with id = " + logFileId +
+                            "! Processing log is here after:";
+                        res.render(
+                            'extract_mac_frames',
+                            renderParams
+                        );
+                    }
+                );
+
                 /* ========================================================================================================================= */
                 /* GET /compute_secured_mac_frames.                                                                                          */
                 /* ========================================================================================================================= */
@@ -1359,15 +1648,15 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
@@ -1378,7 +1667,7 @@ var keystoredb =
                                     {
                                         title: 'Compute secured frames MAC',
                                         help: 'Compute MAC for secured frames in DB',
-					status: "",
+                                        status: "",
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
@@ -1428,7 +1717,7 @@ var keystoredb =
                                                                 {
                                                                     console.log("Domain master Sync frame MSB = " + syncRow.FV);
                                                                     var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                                                    var encshe = new encSHE(row.FrameId, row.Name, row.FV, row.Payload, row.Pad, syncRow.FV);
+                                                                    var encshe = new encSHE(row.FrameId, row.Name, row.Payload.substring(1).replace(/ /g, ''), undefined, row.Pad, syncRow.FV);
                                                                     var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
                                                                     keystoredb.run(
                                                                         updStmt,
@@ -1445,9 +1734,11 @@ var keystoredb =
                                                     var bufferKey = Buffer.from(activeKeys['kMacEcu']);
                                                     var encshe = new encSHE(row.FrameId, row.Name, row.FV, row.Payload, row.Pad);
                                                     var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                                    var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
+                                                    
                                                     keystoredb.run(
                                                         updStmt,
-                                                        [(encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO'), row.id]
+                                                        [macValid, row.id]
                                                     );
                                                 }
                                             }
@@ -1488,30 +1779,30 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
 
-				// Cut Prov frame in 2 64 bytes packets: MSB -> M1, LSB -> M2
-				var bufM2;
-				var stmt = "SELECT Frame FROM MACProvFrames WHERE id = ?";
-				keystoredb.get(
-				    stmt,
-				    [req.params['frameId']],
-				    (err, row) =>
-				    {
-					var SHE_m2 = row.Frame.substring(32, 64);
+                                // Cut Prov frame in 2 64 bytes packets: MSB -> M1, LSB -> M2
+                                var bufM2;
+                                var stmt = "SELECT Frame FROM MACProvFrames WHERE id = ?";
+                                keystoredb.get(
+                                    stmt,
+                                    [req.params['frameId']],
+                                    (err, row) =>
+                                    {
+                                        var SHE_m2 = row.Frame.substring(32, 64);
                                         var bufferM2 = Buffer.from(SHE_m2);
                                         var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
 
@@ -1525,35 +1816,35 @@ var keystoredb =
                                         contentHtml += "fid:'" + fid + "',";
                                         contentHtml += "key:'" + macKey + "'}]";
                                         
-					// Create records in DB and mark the frame SHE cmd args as extracted
+                                        // Create records in DB and mark the frame SHE cmd args as extracted
                                         keystoredb.serialize(
                                             () =>
                                             {
-					        keystoredb.run(
-					            "UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?",
-					            [req.params['frameId']]
-					        );
-					        keystoredb.run(
-					            "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?, ?)",
-					            [req.params['frameId'], bufM2]
-					        );
-					        keystoredb.run(
-					            "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid) VALUES (?, ?, ?)",
-					            [req.params['frameId'], macKey, cid, fid]
-					        );
+                                                keystoredb.run(
+                                                    "UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?",
+                                                    [req.params['frameId']]
+                                                );
+                                                keystoredb.run(
+                                                    "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?, ?)",
+                                                    [req.params['frameId'], bufM2]
+                                                );
+                                                keystoredb.run(
+                                                    "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid) VALUES (?, ?, ?)",
+                                                    [req.params['frameId'], macKey, cid, fid]
+                                                );
                                             }
                                         );
-					res.render(
-					    'extract_she_args_packets',
-					    {
-						title: 'Extract SHE args packets',
-						help: 'Extract SHE args packets from MAC prov frames',
-						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-						content: '1 frame processed !',
+                                        res.render(
+                                            'extract_she_args_packets',
+                                            {
+                                                title: 'Extract SHE args packets',
+                                                help: 'Extract SHE args packets from MAC prov frames',
+                                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                                content: '1 frame processed !',
                                                 sheArgsTbl: contentHtml,
-						accordionTab: 2
-					    }
-					);
+                                                accordionTab: 2
+                                            }
+                                        );
                                     }
                                 );
                             }
@@ -1573,36 +1864,36 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
 
-				// Cut Prov frame in 2 64 bytes packets: MSB -> M1, LSB -> M2
-				var stmt = "SELECT id, Frame FROM MACProvFrames WHERE SHECmdExtracted = 0";
-				keystoredb.all(
-				    stmt,
-				    [],
-				    (err, rows) =>
-				    {
+                                // Cut Prov frame in 2 64 bytes packets: MSB -> M1, LSB -> M2
+                                var stmt = "SELECT id, Frame FROM MACProvFrames WHERE SHECmdExtracted = 0";
+                                keystoredb.all(
+                                    stmt,
+                                    [],
+                                    (err, rows) =>
+                                    {
                                         var she = new decSHE();
                                         var ix;
                                         var contentHtml = "[";
                                         
-					rows.forEach(
-					    (row, ix) =>
-					    {
-						var SHE_m2 = row.Frame.substring(32, 64);
+                                        rows.forEach(
+                                            (row, ix) =>
+                                            {
+                                                var SHE_m2 = row.Frame.substring(32, 64);
                                                 var bufferM2 = Buffer.from(SHE_m2);
                                                 var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
                                                 var bufM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
@@ -1620,40 +1911,40 @@ var keystoredb =
                                                 contentHtml += "fid:'" + fid + "',";
                                                 contentHtml += "key:'" + macKey + "'}";
 
-						// Create records in DB and mark the frame SHE cmd args as extracted
+                                                // Create records in DB and mark the frame SHE cmd args as extracted
                                                 keystoredb.serialize(
                                                     () =>
                                                     {
-						        keystoredb.run(
-						            "UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?",
-						            [row.id]
-						        );
-						        keystoredb.run(
-						            "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?)",
-						            [row.id, bufM2]
-						        );
-						        keystoredb.run(
-						            "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid) VALUES (?, ?, ?, ?)",
-						            [row.id, macKey, cid, fid]
-						        );                                                    
+                                                        keystoredb.run(
+                                                            "UPDATE MACProvFrames SET SHECmdExtracted = 1 WHERE id = ?",
+                                                            [row.id]
+                                                        );
+                                                        keystoredb.run(
+                                                            "INSERT INTO SHEArgsPackets (MACProvFrameId, M2) VALUES (?, ?)",
+                                                            [row.id, bufM2]
+                                                        );
+                                                        keystoredb.run(
+                                                            "INSERT INTO MACKeys (MACProvFrameId, MacKey, cid, fid) VALUES (?, ?, ?, ?)",
+                                                            [row.id, macKey, cid, fid]
+                                                        );                                                    
                                                     }
                                                 );
                                                 console.log("contentHtml = \"" + contentHtml + "\"");
-					    }
-					);
+                                            }
+                                        );
                                         contentHtml += "]";
                                         console.log("contentHtml = \"" + contentHtml + "\"");
-					res.render(
-					    'extract_she_args_packets',
-					    {
-						title: 'Extract SHE args packets',
-						help: 'Extract SHE args packets from MAC prov frames',
-						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-						content: rows.length + ' frames processed',
+                                        res.render(
+                                            'extract_she_args_packets',
+                                            {
+                                                title: 'Extract SHE args packets',
+                                                help: 'Extract SHE args packets from MAC prov frames',
+                                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                                content: rows.length + ' frames processed',
                                                 sheArgsTbl: contentHtml,
-						accordionTab: 2
-					    }
-					);
+                                                accordionTab: 2
+                                            }
+                                        );
                                     }
                                 );
                             }
@@ -1673,30 +1964,30 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
 
-				keystoredb.all(
-				    "SELECT id, MACProvFrameId, M2, KeysExtracted FROM SHEArgsPackets",
-				    [],
-				    (err, rows) =>
-				    {
-					var contentHtml = "";
-					rows.forEach(
-					    (row, ix) =>
-					    {
+                                keystoredb.all(
+                                    "SELECT id, MACProvFrameId, M2, KeysExtracted FROM SHEArgsPackets",
+                                    [],
+                                    (err, rows) =>
+                                    {
+                                        var contentHtml = "";
+                                        rows.forEach(
+                                            (row, ix) =>
+                                            {
                                                 if (ix != 0)
                                                     contentHtml += ",";
                                                 contentHtml +=
@@ -1704,20 +1995,20 @@ var keystoredb =
                                                     "frameId:" + row.MACProvFrameId + "," +
                                                     "m2:'" + row.M2.toString('hex') + "'," +
                                                     "keysExtracted:" + (row.KeysExtracted ? "true" : "false") + "}";
-					    }
-					);
-					res.render(
-					    'list_she_args_packets',
-					    {
-						title: 'List stored SHE args packets',
-						help: 'Table listing all SHE commands args stored in DB',
-						activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-						sheArgsTbl: '[' + contentHtml + ']',
-						accordionTab: 2
-					    }
-					);
-				    }
-				);
+                                            }
+                                        );
+                                        res.render(
+                                            'list_she_args_packets',
+                                            {
+                                                title: 'List stored SHE args packets',
+                                                help: 'Table listing all SHE commands args stored in DB',
+                                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                                sheArgsTbl: '[' + contentHtml + ']',
+                                                accordionTab: 2
+                                            }
+                                        );
+                                    }
+                                );
                             }
                         );
                     }
@@ -1743,41 +2034,41 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
 
-				// 
-				// Unwrap key from frame
-				//
-				//var kMacEcu = "00000000000000000000000000000011";
-				//var kMasterEcu = "0153F7000099ED9F320451AA8A7D9707";
-				//var key_update_enc_c = "010153484500800000000000000000B0";
-				var frameIdParam = req.params['frameId'];
-				var renderParams = 
+                                // 
+                                // Unwrap key from frame
+                                //
+                                //var kMacEcu = "00000000000000000000000000000011";
+                                //var kMasterEcu = "0153F7000099ED9F320451AA8A7D9707";
+                                //var key_update_enc_c = "010153484500800000000000000000B0";
+                                var frameIdParam = req.params['frameId'];
+                                var renderParams = 
                                     {
                                         title: 'Unwrap MAC keys from a MAC Prov. Frame',
                                         help: 'Unwrap MAC keys provided in a MAC provisionning frame',
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-					content: "",
+                                        content: "",
                                         accordionTab: 3
                                     };
-				keystoredb.get(
-				    "SELECT Frame FROM MACProvFrames WHERE id = ?",
-				    [frameIdParam],
-				    (err, row) =>
-				    {
+                                keystoredb.get(
+                                    "SELECT Frame FROM MACProvFrames WHERE id = ?",
+                                    [frameIdParam],
+                                    (err, row) =>
+                                    {
                                         if (err || row === undefined)
                                         {
                                             next(err.status || 500);
@@ -1823,10 +2114,10 @@ var keystoredb =
                                         }
                                         res.render(
                                             'unwrap_mac_keys_from_frame',
-				            renderParams
+                                            renderParams
                                         );
-				    }
-				);
+                                    }
+                                );
                             }
                         );
                     }
@@ -1844,41 +2135,41 @@ var keystoredb =
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
                         keystoredb.get(
-			    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-			    (err, key) =>
-			    {
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
                                 if (key != undefined)
                                 {
-				    console.log("Active K_MAC_ECU = " + key.MacEcu);
-				    k_mac_ecu = key.MacEcu;
-				    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
-				    k_master_ecu = key.MasterEcu;
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
                                 console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
                                 console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
 
-				// 
-				// Unwrap key from frame
-				//
-				//var kMacEcu = "00000000000000000000000000000011";
-				//var kMasterEcu = "0153F7000099ED9F320451AA8A7D9707";
-				//var key_update_enc_c = "010153484500800000000000000000B0";
-				var frameIdParam = req.params['frameId'];
-				var renderParams = 
+                                // 
+                                // Unwrap key from frame
+                                //
+                                //var kMacEcu = "00000000000000000000000000000011";
+                                //var kMasterEcu = "0153F7000099ED9F320451AA8A7D9707";
+                                //var key_update_enc_c = "010153484500800000000000000000B0";
+                                var frameIdParam = req.params['frameId'];
+                                var renderParams = 
                                     {
                                         title: 'Show unwrapped MAC Prov. Frame',
                                         help: 'Show unwrapped MAC provisionning frame',
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-					content: "",
+                                        content: "",
                                         accordionTab: 3
                                     };
-				keystoredb.get(
-				    "SELECT * FROM SHEArgsPackets WHERE MACProvFrameId = ?",
-				    [frameIdParam],
-				    (err, row) =>
-				    {
+                                keystoredb.get(
+                                    "SELECT * FROM SHEArgsPackets WHERE MACProvFrameId = ?",
+                                    [frameIdParam],
+                                    (err, row) =>
+                                    {
                                         if (err || row == undefined)
                                         {
                                             next(err.status || 500);
@@ -1913,10 +2204,10 @@ var keystoredb =
                                         }
                                         res.render(
                                             'unwrap_mac_keys_from_frame',
-				            renderParams
+                                            renderParams
                                         );
-				    }
-				);
+                                    }
+                                );
                             }
                         );
                     }
