@@ -19,6 +19,7 @@
     "formidable": "^2.1.1",
     "http-errors": "~1.6.3",
     "jest": "^29.3.1",
+    "line-by-line": "^0.1.6",
     "miyaguchipreneel": "^1.0.1",
     "morgan": "~1.9.1",
     "multer": "^1.4.5-lts.1",
