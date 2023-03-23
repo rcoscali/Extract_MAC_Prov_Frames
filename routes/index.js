@@ -1,20 +1,26 @@
-var os = require('os');
-var express = require('express');
-var router = express.Router();
-var mime = require('mime');
-var reader = require ("buffered-reader");
-var formidable = require('formidable');
-var path = require('path');
-var fs = require('fs');
+/**
+ *
+ */
+const os = require('os');
+const express = require('express');
+const router = express.Router();
+const mime = require('mime');
+const reader = require ("buffered-reader");
+const formidable = require('formidable');
+const path = require('path');
+const fs = require('fs');
+const stream = require('stream');
+const LineByLineReader = require('line-by-line')
 const bodyParser = require("body-parser");
 const sqlite3 = require('sqlite3').verbose();
 const {exec} = require("child_process");
 const form = formidable({uploadDir: os.tmpdir()});
-var AesCmac = require('node-aes-cmac').aesCmac;
+const AesCmac = require('node-aes-cmac').aesCmac;
 const decSHE = require('she_decrypt');
 const encSHE = require('she_encrypt');
-var app = require('../app');
+const app = require('../app');
 
+// Constants for PATH (relative to $MAV_PROV_ROOT)
 const DbLogPath = process.env.MAC_PROV_ROOT + '/var/log';
 const DbDirPath = process.env.MAC_PROV_ROOT + '/var/lib';
 const DbFilePath = DbDirPath + '/keystore.db';
