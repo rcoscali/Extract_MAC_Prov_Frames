@@ -16,3 +16,5 @@ var/lib/keystore.db-journal
 var/log/*
 
 .idea/
+
+*.orig
