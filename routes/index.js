@@ -103,7 +103,7 @@ var keystoredb =
                         console.log("*** GET /favicon.ico");
                         var faviconOptions =
                             {
-                                'root': path.join(process.env.MAC_PROV_ROOT, 'public'),
+                                'root': path.join(process.env.MAC_PROV_ROOT, 'public/images'),
                                 'dotfiles': 'deny',
                                 //'acceptRanges': false,
                                 'headers' :
