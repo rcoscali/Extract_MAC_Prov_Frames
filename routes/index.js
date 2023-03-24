@@ -774,7 +774,7 @@ var keystoredb =
                                                                     return;
                                                                 }
                                                                 var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
-                                                                                                 VALUES             (        ?,     ?);";
+                                                                                         VALUES             (        ?,     ?);";
                                                                 keystoredb.run(
                                                                     insertStmt,
                                                                     [row.id, provFrame['Payload']],
@@ -1273,13 +1273,12 @@ var keystoredb =
                                                 {
                                                     var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
                                                     ecuName = ecuFields.groups.ecu;
-                                                    console.log("get FV for Sync frame: payload = " + payload);
                                                     if ((fields = fvRE.exec(payload)) != null)
                                                     {
                                                         dlc = fields.groups.dlc;
                                                         fv = fields.groups.fv.replace(/ /g, '');
-                                                        msb = fv.substring(0, 7).replace(/ /g, '');
-                                                        lsb = fv.substring(8, 11).replace(/ /g, '');
+                                                        msb = fv.substring(0, 8).replace(/ /g, '');
+                                                        lsb = fv.substring(8).replace(/ /g, '');
                                                         payload = '';
                                                     }
                                                     else
@@ -1290,11 +1289,27 @@ var keystoredb =
                                                 {
                                                     ecuName = ecuFields.groups.ecu;
                                                     var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
-                                                    console.log("get FV for ReSync frame: payload = " + payload);
+                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
                                                     if ((fields = fvRE.exec(payload)) != null)
                                                     {
                                                         dlc = fields.groups.dlc;
-                                                        fv = fields.groups.fvstbl.replace(/ /g, '');
+                                                        console.log("FVs has " + fields.groups.fv);
+                                                        msb = new Array;
+                                                        lsb = new Array;
+                                                        fields.groups.fv.map(
+                                                            (fvelem, fvix) => 
+                                                            {
+                                                                console.log("FV #" + fvix + " = " + fields.groups.fv[fvix]);
+                                                                fields.groups.fv[fvix] = fields.groups.fv[fvix].replace(/ /g, '');
+                                                                var msblem, lcbelem;
+                                                                msbelem = fields.groups.fv[fvix].substring(0,8);
+                                                                lsbelem = fields.groups.fv[fvix].substring(8,12);
+                                                                msb.push(msbelem);
+                                                                lsb.push(lsbelem);
+                                                                console.log("MSB #" + fvix + " = " + msbelem);
+                                                                console.log("LSB #" + fvix + " = " + lsbelem);
+                                                            }
+                                                        );
                                                         payload = '';
                                                     }
                                                     else
@@ -1479,8 +1494,8 @@ var keystoredb =
                                                             {
                                                                 dlc = fields.groups.dlc;
                                                                 fv = fields.groups.fv.replace(/ /g, '');
-                                                                msb = fv.substring(0, 7).replace(/ /g, '');
-                                                                lsb = fv.substring(8, 11).replace(/ /g, '');
+                                                                msb = fv.substring(0, 8).replace(/ /g, '');
+                                                                lsb = fv.substring(8).replace(/ /g, '');
                                                                 payload = '';
                                                             }
                                                             else
@@ -1490,12 +1505,29 @@ var keystoredb =
                                                         else if ((ecuFields = resyncRE.exec(name)) != null)
                                                         {
                                                             ecuName = ecuFields.groups.ecu;
-                                                            var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
+                                                            var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
                                                             console.log("get FV for ReSync frame: payload = " + payload);
                                                             if ((fields = fvRE.exec(payload)) != null)
                                                             {
                                                                 dlc = fields.groups.dlc;
-                                                                fv = fields.groups.fvstbl.replace(/ /g, '');
+                                                                console.log("FVs has " + fields.groups.fv);
+                                                                msb = new Array;
+                                                                lsb = new Array;
+                                                                fields.groups.fv.map(
+                                                                    (fvelem, fvix) => 
+                                                                    {
+                                                                        console.log("FV #" + fvix + " = " + fields.groups.fv[fvix]);
+                                                                        fields.groups.fv[fvix] = fields.groups.fv[fvix].replace(/ /g, '');
+                                                                        var msblem, lcbelem;
+                                                                        msbelem = fields.groups.fv[fvix].substring(0,8);
+                                                                        lsbelem = fields.groups.fv[fvix].substring(8,12);
+                                                                        msb.push(msbelem);
+                                                                        lsb.push(lsbelem);
+                                                                        console.log("MSB #" + fvix + " = " + msbelem);
+                                                                        console.log("LSB #" + fvix + " = " + lsbelem);
+                                                                    }
+                                                                );
+                                                                
                                                                 payload = '';
                                                             }
                                                             else
@@ -1547,7 +1579,66 @@ var keystoredb =
                         );
                     }
                 );
-                
+                /* ========================================================================================================================= */
+                /* GET /compute_secured_mac_frames.                                                                                          */
+                /* ========================================================================================================================= */
+                router.get(
+                    'compute_secured_frames_mac_by_id',
+                    (req, res, next) =>
+                    {
+                        console.log("*** GET /compute_secured_frames_mac_by_id");
+                        var result_log = "";
+                        var activeKeys = new Object;
+                        var k_mac_ecu = "Not Set !";
+                        var k_master_ecu = "Not Set !";
+                        keystoredb.get(
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
+                                if (key != undefined)
+                                {
+                                    console.log("Active K_MAC_ECU = " + key.MacEcu);
+                                    k_mac_ecu = key.MacEcu;
+                                    console.log("Active K_MASTER_ECU = " + key.MasterEcu);
+                                    k_master_ecu = key.MasterEcu;
+                                }
+                                activeKeys['kMacEcu'] = k_mac_ecu;
+                                activeKeys['kMasterEcu'] = k_master_ecu;
+                                console.log("renderParams.activeKeys['kMacEcu'] = " + activeKeys['kMacEcu']);
+                                console.log("renderParams.activeKeys['kMasterEcu'] = " + activeKeys['kMasterEcu']);
+
+                                var renderParams = 
+                                    {
+                                        title: 'Compute secured frames MAC',
+                                        help: 'Compute MAC for secured frames in DB',
+                                        status: "",
+                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                        accordionTab: 2
+                                    };
+                                var stmt = "SELECT * FROM SecuredFrames WHERE Mac = 'unknown'";
+                                keystoredb.all(
+                                    stmt,
+                                    [],
+                                    (err, rows) =>
+                                    {
+                                        if (err)
+                                        {
+                                            next(err);
+                                            return;
+                                        }
+                                        renderParams['status'] =
+                                            " Secured frames extracted Processing log is here after:";
+                                        res.render(
+                                            'compute_secured_frames_mac_by_id',
+                                            renderParams
+                                        );
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+                        
                 /* ========================================================================================================================= */
                 /* GET /compute_secured_mac_frames.                                                                                          */
                 /* ========================================================================================================================= */
