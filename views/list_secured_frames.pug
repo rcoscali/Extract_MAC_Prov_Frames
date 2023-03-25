@@ -84,6 +84,13 @@ block content
     |   var cur_page = #{curPage};
     |   var next_page = #{nextPage};
     |   var last_page = #{lastPage};
+    |   if (cur_page > last_page)
+    |   {
+    |     alert('Requested page is greater than number of page available! Set to last page');
+    |     cur_page = last_page;
+    |     next_page = last_page;
+    |     document.location.href = '/list_secured_frames/' + last_page;
+    |   }
     |   var link_first_page = document.getElementById('link_first');
     |   var link_prev_page = document.getElementById('link_prev');
     |   var href_attr = document.createAttribute('href');
