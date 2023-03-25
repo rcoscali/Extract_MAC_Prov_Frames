@@ -1463,10 +1463,10 @@ var keystoredb =
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
-                                var stmt = "SELECT * FROM SecuredFrames WHERE Mac = 'unknown'";
+                                var stmt = "SELECT * FROM SecuredFrames WHERE id = ?";
                                 keystoredb.all(
                                     stmt,
-                                    [],
+                                    [frameId],
                                     (err, rows) =>
                                     {
                                         if (err)

@@ -9,6 +9,15 @@ a {
   color: #00B7FF;
 }
 
+.page-cursor {
+    background-color: #35689F;
+    text-align: center;
+}
+
+.page-cursor td {
+    textAlign: center;
+}
+
 .div-scroll div.scroll {
     background-color: #fff;
     width: 1000px;
