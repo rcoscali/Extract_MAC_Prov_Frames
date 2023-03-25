@@ -10,26 +10,32 @@ block content
   p
     table(width="100%")
       tr
-        td(align="right", width="50px")
-          label(class='labelform', for="mac_key").
-            MacKey
+        td(align="right", width="250px")
+          label(class='labelform', for="mac_key")
+            font(size="5px").
+              MacKey
         td
-          input(type="text", id="mac_key", title="Set the active MAC key ...", name="k_mac_ecu", accept="text/ascii", value="10357f020289ad8f512662ba988f1111", minlength="32", maxlength="32", size="32")
+          font(size="5px")
+            input(type="text", id="mac_key", title="Set the active MAC key ...", name="k_mac_ecu", accept="text/ascii", value="10357f020289ad8f512662ba988f1111", minlength="32", maxlength="32", size="32")
       tr
         td(align="right", width="50px")
-          label(class='labelform', for="master_mac_key").
-            Master Mac Key
+          label(class='labelform', for="k_master_mac_ecu")
+            font(size="5px").
+              Master Mac Key
         td
-          input(type="text", id="master_mac_key", title="Set the active Master MAC key ...", name="k_master_mac_ecu", accept="text/ascii", value="0153F7000099ED9F320451AA8A7D9707", minlength="32", maxlength="32", size="32")
+          font(size="5px")
+            input(type="text", id="master_mac_key", title="Set the active Master MAC key ...", name="k_master_mac_ecu", accept="text/ascii", value="0153F7000099ED9F320451AA8A7D9707", minlength="32", maxlength="32", size="32")
       tr
         td(colspan="2")
           p
             | &nbsp;
       tr
         td
-          input(type="button", title="Send the keys for activation ...", value="Activate keys", onClick="document.location.href='/activate_keys/' + document.getElementById('mac_key').value + '/' + document.getElementById('master_mac_key').value")
+          center
+            input(type="submit", class="cancel", title="Send the keys for activation ...", value="Activate", onClick="document.location.href='/activate_keys/' + document.getElementById('mac_key').value + '/' + document.getElementById('master_mac_key').value")
         td
-          input(type="button", title="Cancel the file upload ...", value="Annulation", onclick="document.location.href='/'")
+          center
+            input(type="button", title="Cancel the file upload ...", value="Annulation", onclick="document.location.href='/'")
   script(type="text/javascript")
     | var active_keys = #{activeKeys};
     | function localOnLoad() 
