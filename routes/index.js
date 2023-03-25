@@ -1744,8 +1744,8 @@ var keystoredb =
                                         if (number_of_pages < (countRow.row_count / 20))
                                             number_of_pages++;
                                         var cur_page = page;
-                                        var cur_page_less_1 = (cur_page > 1 ? cur_page-1 : 0);
-                                        var cur_page_plus_1 = ((cur_page+1) < number_of_pages ? (cur_page+1) : 0);
+                                        var cur_page_less_1 = (cur_page > 1 ? cur_page-1 : 1);
+                                        var cur_page_plus_1 = ((cur_page+1) < number_of_pages ? (cur_page+1) : number_of_pages);
                                         renderParams['lastPage'] = number_of_pages;
                                         renderParams['curPage'] = cur_page;
                                         renderParams['prevPage'] = cur_page_less_1;
@@ -1778,11 +1778,11 @@ var keystoredb =
                                                             content += "EcuName:'" + EcuName + "',";                                                            
                                                             content += "tMAC:'0x" + tMAC + "',";                                                            
                                                             content += "DLC:'0x" + DLC + "',";                                                            
-                                                            content += "Payload:'Ox" + Payload + "',";                                                            
-                                                            content += "FV:'Ox" + FV + "',";                                                            
-                                                            content += "Msb:'Ox" + Msb + "',";                                                            
-                                                            content += "Lsb:'Ox" + Lsb + "',";                                                            
-                                                            content += "Pad:'Ox" + Pad + "',";                                                            
+                                                            content += "Payload:'" + (Payload.length ? "0x" : "") + Payload + "',";                                                            
+                                                            content += "FV:'" + (FV.length ? "0x" : "") + FV + "',";                                                            
+                                                            content += "Msb:'" + (Msb.length ? "0x" : "") + Msb + "',";                                                            
+                                                            content += "Lsb:'" + (Lsb.length ? "0x" : "") + Lsb + "',";                                                            
+                                                            content += "Pad:'" + (Pad.length ? "0x" : "") + Pad + "',";                                                            
                                                             content += "Mac:'" + Mac + "',";                                                            
                                                             content += "SyncFrameId:'" + SyncFrameId + "'";
                                                             content += "}";
