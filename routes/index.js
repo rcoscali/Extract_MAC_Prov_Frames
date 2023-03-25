@@ -1443,6 +1443,8 @@ var keystoredb =
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
+                        var renderParams;
+                        
                         keystoredb.get(
                             "SELECT MacEcu, MasterEcu FROM ActiveKeys",
                             (err, key) =>
@@ -1455,95 +1457,149 @@ var keystoredb =
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
 
-                                var renderParams = 
+                                renderParams = 
                                     {
                                         title: 'Compute secured frames MAC',
                                         help: 'Compute MAC for secured frames in DB',
                                         status: "",
+                                        result_log: "",
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
-                                var stmt = "SELECT * FROM SecuredFrames WHERE id = ?";
-                                keystoredb.all(
+                                var stmt = "SELECT * FROM SecuredFrames WHERE id = ? ORDER BY TimeStamp ASC";
+                                keystoredb.get(
                                     stmt,
                                     [frameId],
-                                    (err, rows) =>
+                                    (err, row) =>
                                     {
                                         if (err)
                                         {
                                             next(err);
                                             return;
                                         }
-                                        rows.forEach(
-                                            (row, ix) =>
-                                            {
-                                                var scfdRegex = /^.*SC_FD.*$/;
-                                                if (scfdRegex.test(row.Name))
+
+                                        var scfdRegex = /^.*SC_FD.*$/;
+                                        if (scfdRegex.test(row.Name))
+                                        {
+                                            var ecuRegex = /^(?<ecuName>[A-Za-z0-9]+)_.*$/;
+                                            fields = ecuRegex.exec(row.Name);
+                                            var ecuName = fields.groups.ecuName;
+                                            var stmtDomain =
+                                                "SELECT DISTINCT ecu.id, ecu.Name, ecu.isDomainMaster, ecu.DomainMasterId, domain.Name as DomainName " +
+                                                "FROM ECUs as ecu "+
+                                                "INNER JOIN ECUs as domain ON ecu.DomainMasterId = domain.id "+
+                                                "WHERE ecu.Name = ?";
+                                            keystoredb.get(
+                                                stmtDomain,
+                                                [ecuName],
+                                                (err, ecuRow) =>
                                                 {
-                                                    var ecuRegex = /^(?<ecuName>[A-Za-z0-9]+)_.*$/;
-                                                    fields = ecuRegex.exec(row.Name);
-                                                    var ecuName = fields.groups.ecuName;
-                                                    var stmtDomain =
-                                                        "SELECT DISTINCT ecu.id, ecu.Name, ecu.isDomainMaster, ecu.DomainMasterId, domain.Name as DomainName " +
-                                                        "FROM ECUs as ecu "+
-                                                        "INNER JOIN ECUs as domain ON ecu.DomainMasterId = domain.id "+
-                                                        "WHERE ecu.Name = ?";
+                                                    if (err)
+                                                    {
+                                                        next(err);
+                                                        return;
+                                                    }
+                                                    console.log("domain master ecu = " + ecuRow.DomainName);
+                                                    var syncFrameCntStmt = "SELECT COUNT(id) AS row_count FROM SecuredFrames WHERE Name LIKE ? AND TimeStamp < ? ORDER BY TimeStamp DESC";
                                                     keystoredb.get(
-                                                        stmtDomain,
-                                                        [ecuName],
-                                                        (err, ecuRow) =>
+                                                        syncFrameCntStmt,
+                                                        ['FVSyncFrame_'+ecuRow.DomainName+'%', ecuRow.TimeStamp],
+                                                        (err, cntRow) =>
                                                         {
                                                             if (err)
                                                             {
                                                                 next(err);
                                                                 return;
                                                             }
-                                                            console.log("domain master ecu = " + ecuRow.DomainName);
-                                                            var syncFrameCntStmt = "SELECT COUNT(*) FROM SecuredFrames WHERE Name LIKE ? ORDER BY TimeStamp DESC LIMIT 1";
-                                                            
-                                                            var syncFrameStmt = "SELECT * FROM SecuredFrames WHERE Name LIKE ? ORDER BY TimeStamp DESC LIMIT 1";
-                                                            keystoredb.run(
-                                                                syncFrameStmt,
-                                                                ['FVSyncFrame_'+ecuRow.DomainName+'_*'],
-                                                                (err, syncRow) =>
-                                                                {
-                                                                    console.log("Domain master Sync frame MSB = " + syncRow.FV);
-                                                                    var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                                                    var encshe = new encSHE(row.FrameId, row.Name, row.Payload.substring(1).replace(/ /g, ''), undefined, row.Pad, syncRow.FV);
-                                                                    var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
-                                                                    keystoredb.run(
-                                                                        updStmt,
-                                                                        [(encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO'), row.id]
-                                                                    );
-                                                                }
-                                                            );
+                                                            if (cntRow.row_count == 0)
+                                                            {
+                                                                var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                                                keystoredb.run(
+                                                                    updStmt,
+                                                                    ['Undecided', row.id]
+                                                                );                                                                        
+                                                            }
+                                                            else
+                                                            {
+                                                                var syncFrameStmt = "SELECT * FROM SecuredFrames WHERE Name LIKE ? AND TimeStamp < ? ORDER BY TimeStamp DESC LIMIT 1";
+                                                                keystoredb.run(
+                                                                    syncFrameStmt,
+                                                                    ['FVSyncFrame_'+ecuRow.DomainName+'%', ecuRow.TimeStamp],
+                                                                    (err, syncRow) =>
+                                                                    {
+                                                                        console.log("Domain master Sync frame MSB = " + syncRow.FV);
+                                                                        var bufferKey = Buffer.from(activeKeys['kMacEcu']);
+                                                                        var encshe = new encSHE(
+                                                                            row.FrameId,
+                                                                            row.Name,
+                                                                            row.TimeStamp,
+                                                                            row.ecuName,
+                                                                            row.DLC,
+                                                                            Buffer.from(row.tMAC, 'hex'),
+                                                                            Buffer.from(syncRow.FV, 'hex'),
+                                                                            Buffer.from(row.Payload, 'hex'),
+                                                                            Buffer.from(syncRow.Msb, 'hex'),
+                                                                            Buffer.from(row.Lsb, 'hex'),
+                                                                            Buffer.from(row.Pad, 'hex')
+                                                                        );
+                                                                        var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                                                        keystoredb.run(
+                                                                            updStmt,
+                                                                            [(encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO'), row.id]
+                                                                        );
+                                                                    }
+                                                                );                                                                        
+                                                            }
                                                         }
-                                                    );
-                                                    
+                                                    );                                                            
                                                 }
-                                                else
-                                                {
-                                                    var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                                    var encshe = new encSHE(row.FrameId, row.Name, row.FV, row.Payload, row.Pad);
-                                                    var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
-                                                    var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
-                                                    
-                                                    keystoredb.run(
-                                                        updStmt,
-                                                        [macValid, row.id]
-                                                    );
-                                                }
-                                            }
-                                        );
-                                        
+                                            );
+                                            
+                                        }
+                                        else
+                                        {
+                                            var bufferKey = Buffer.from(activeKeys['kMacEcu']);
+                                            console.log(
+                                                "id:" +row.FrameId +
+                                                    " name:" +row.Name+
+                                                    " time:" +row.TimeStamp+
+                                                    " ecu:" +row.EcuName+
+                                                    " dlc:" +row.DLC+
+                                                    " tmac:" +row.tMAC+
+                                                    " fv:" +row.FV+
+                                                    " payload:" +row.Payload+
+                                                    " msb:" +row.Msb+
+                                                    " lsb:" +row.Lsb+
+                                                    " pad:" +row.Pad
+                                            );
+                                            var encshe = new encSHE(
+                                                row.FrameId,
+                                                row.Name,
+                                                row.TimeStamp,
+                                                row.EcuName,
+                                                row.DLC,
+                                                Buffer.from(row.tMAC, 'hex'),
+                                                Buffer.from(row.FV, 'hex'),
+                                                Buffer.from(row.Payload, 'hex'),
+                                                Buffer.from(row.Msb, 'hex'),
+                                                Buffer.from(row.Lsb, 'hex'),
+                                                Buffer.from(row.Pad, 'hex')
+                                            );
+                                            var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                            var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
+                                            
+                                            keystoredb.run(
+                                                updStmt,
+                                                [macValid, row.id]
+                                            );
+                                        }
                                     }
                                 );
+                                
                             }
                         );
                         renderParams['result_log'] = result_log;
-                        renderParams['status'] =
-                            " Secured frames extracted from log file with id = " + logFileId +
-                            "! Processing log is here after:";
+                        renderParams['status'] = " Secured frames extracted from log files! Processing log is here after:";
                         res.render(
                             'extract_mac_frames',
                             renderParams
@@ -1650,7 +1706,19 @@ var keystoredb =
                                                                             {
                                                                                 console.log("Domain master Sync frame MSB = " + syncRow.FV);
                                                                                 var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                                                                var encshe = new encSHE(row.FrameId, row.Name, row.TimeStamp, row.ecuName, row.DLC, row.tMAC, syncRow.FV, row.Payload, syncRow.Msb, row.Lsb, row.Pad);
+                                                                                var encshe = new encSHE(
+                                                                                    row.FrameId,
+                                                                                    row.Name,
+                                                                                    row.TimeStamp,
+                                                                                    row.ecuName,
+                                                                                    row.DLC,
+                                                                                    Buffer.from(row.tMAC, 'hex'),
+                                                                                    Buffer.from(syncRow.FV, 'hex'),
+                                                                                    Buffer.from(row.Payload, 'hex'),
+                                                                                    Buffer.from(syncRow.Msb, 'hex'),
+                                                                                    Buffer.from(row.Lsb, 'hex'),
+                                                                                    Buffer.from(row.Pad, 'hex')
+                                                                                );
                                                                                 var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
                                                                                 keystoredb.run(
                                                                                     updStmt,
@@ -1668,8 +1736,32 @@ var keystoredb =
                                                 else
                                                 {
                                                     var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                                    console.log("id:" +row.FrameId+ " name:" +row.Name+ " time:" +row.TimeStamp+ " ecu:" +row.EcuName+ " dlc:" +row.DLC+ " tmac:" +row.tMAC+ " fv:" +row.FV+ " payload:" +row.Payload+ " msb:" +row.Msb+ " lsb:" +row.Lsb+ " pad:" +row.Pad);
-                                                    var encshe = new encSHE(row.FrameId, row.Name, row.TimeStamp, row.EcuName, row.DLC, row.tMAC, row.FV, row.Payload, row.Msb, row.Lsb, row.Pad);
+                                                    console.log(
+                                                        "id:" +row.FrameId +
+                                                            " name:" +row.Name+
+                                                            " time:" +row.TimeStamp+
+                                                            " ecu:" +row.EcuName+
+                                                            " dlc:" +row.DLC+
+                                                            " tmac:" +row.tMAC+
+                                                            " fv:" +row.FV+
+                                                            " payload:" +row.Payload+
+                                                            " msb:" +row.Msb+
+                                                            " lsb:" +row.Lsb+
+                                                            " pad:" +row.Pad
+                                                    );
+                                                    var encshe = new encSHE(
+                                                        row.FrameId,
+                                                        row.Name,
+                                                        row.TimeStamp,
+                                                        row.EcuName,
+                                                        row.DLC,
+                                                        Buffer.from(row.tMAC, 'hex'),
+                                                        Buffer.from(row.FV, 'hex'),
+                                                        Buffer.from(row.Payload, 'hex'),
+                                                        Buffer.from(row.Msb, 'hex'),
+                                                        Buffer.from(row.Lsb, 'hex'),
+                                                        Buffer.from(row.Pad, 'hex')
+                                                    );
                                                     var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
                                                     var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
                                                     
