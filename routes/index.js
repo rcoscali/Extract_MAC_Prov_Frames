@@ -1375,10 +1375,10 @@ var keystoredb =
                     }
                 );
                 /* ========================================================================================================================= */
-                /* GET /compute_secured_mac_frames.                                                                                          */
+                /* GET /compute_secured_frames_mac_by_id                                                                                     */
                 /* ========================================================================================================================= */
                 router.get(
-                    'compute_secured_frames_mac_by_id',
+                    '/compute_secured_frames_mac_by_id',
                     (req, res, next) =>
                     {
                         console.log("*** GET /compute_secured_frames_mac_by_id");
@@ -1431,7 +1431,7 @@ var keystoredb =
                 );
                         
                 /* ========================================================================================================================= */
-                /* GET /compute_secured_mac_frames.                                                                                          */
+                /* GET /compute_secured_mac_frames/:frameId                                                                                  */
                 /* ========================================================================================================================= */
                 router.get(
                     '/compute_secured_frames_mac/:frameId',
@@ -1689,6 +1689,117 @@ var keystoredb =
                                     'extract_mac_frames',
                                     renderParams
                                 );
+                            }
+                        );
+                    }
+                );
+
+                /* ========================================================================================================================= */
+                /* GET /list_secured_frames/:page                                                                                                  */
+                /* ========================================================================================================================= */
+                router.get(
+                    '/list_secured_frames/:page',
+                    (req, res, next) =>
+                    {
+                        var result_log = "";
+                        var activeKeys = new Object;
+                        var k_mac_ecu = "Not Set !";
+                        var k_master_ecu = "Not Set !";
+                        var page = (req.params['page'] !== undefined ? Number.parseInt(req.params['page']) : 1);
+                        var renderParams;
+
+                        console.log("*** GET /list_secured_frames/:page (= "+page+")");
+                        keystoredb.get(
+                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                            (err, key) =>
+                            {
+                                if (key != undefined)
+                                {
+                                    k_mac_ecu = key.MacEcu;
+                                    k_master_ecu = key.MasterEcu;
+                                }
+                                activeKeys['kMacEcu'] = k_mac_ecu;
+                                activeKeys['kMasterEcu'] = k_master_ecu;
+
+                                renderParams = 
+                                    {
+                                        title: 'List of secured frames',
+                                        help: 'List secured frames stored in DB',
+                                        status: "",
+                                        content: "",
+                                        curPage: 0,
+                                        prevPage: 0,
+                                        nextPage: 0,
+                                        lastPage: 0,
+                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                        accordionTab: 2
+                                    };
+                                countScfdStmt = "SELECT COUNT(id) AS row_count FROM SecuredFrames";
+                                keystoredb.get(
+                                    countScfdStmt,
+                                    [],
+                                    (err, countRow) =>
+                                    {
+                                        var number_of_pages = Math.floor(countRow.row_count / 20);
+                                        if (number_of_pages < (countRow.row_count / 20))
+                                            number_of_pages++;
+                                        var cur_page = page;
+                                        var cur_page_less_1 = (cur_page > 1 ? cur_page-1 : 0);
+                                        var cur_page_plus_1 = ((cur_page+1) < number_of_pages ? (cur_page+1) : 0);
+                                        renderParams['lastPage'] = number_of_pages;
+                                        renderParams['curPage'] = cur_page;
+                                        renderParams['prevPage'] = cur_page_less_1;
+                                        renderParams['nextPage'] = cur_page_plus_1;
+                                        
+                                        scfdStmt = "SELECT * FROM SecuredFrames LIMIT 20 OFFSET ?";
+                                        keystoredb.all(
+                                            scfdStmt,
+                                            [(cur_page -1) * 20 > 0 ? ((cur_page -1) * 20) : 0],
+                                            (err, rows) =>
+                                            {
+                                                if (err)
+                                                {
+                                                    next(err);
+                                                    return;
+                                                }
+                                                var content = "[";
+                                                rows.forEach(
+                                                    (row, ix) =>
+                                                    {
+                                                        if (ix > 0 && ix < 20)
+                                                            content += ",";
+                                                        with (row)
+                                                        {
+                                                            content += "{";
+                                                            content += "id:" + id + ",";
+                                                            content += "Name:'" + Name + "',";
+                                                            content += "TimeStamp:" + TimeStamp + ",";                                                            
+                                                            content += "FrameType:'" + FrameId + "',";                                                            
+                                                            content += "EcuName:'" + EcuName + "',";                                                            
+                                                            content += "tMAC:'0x" + tMAC + "',";                                                            
+                                                            content += "DLC:'0x" + DLC + "',";                                                            
+                                                            content += "Payload:'Ox" + Payload + "',";                                                            
+                                                            content += "FV:'Ox" + FV + "',";                                                            
+                                                            content += "Msb:'Ox" + Msb + "',";                                                            
+                                                            content += "Lsb:'Ox" + Lsb + "',";                                                            
+                                                            content += "Pad:'Ox" + Pad + "',";                                                            
+                                                            content += "Mac:'" + Mac + "',";                                                            
+                                                            content += "SyncFrameId:'" + SyncFrameId + "'";
+                                                            content += "}";
+                                                        }
+                                                    }
+                                                );
+                                                content += "]";
+                                                renderParams['scfdFrames'] = content;
+                                                res.render(
+                                                    "list_secured_frames",
+                                                    renderParams
+                                                );
+                                            }
+                                        );
+                                    }
+                                );
+                                
                             }
                         );
                     }

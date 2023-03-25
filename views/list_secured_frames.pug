@@ -1,0 +1,86 @@
+extends layout
+
+block content
+  h1 
+    center
+      | Welcome to #{title}
+  font(size="3px", color="#aaf")
+    p(align="right")
+      | #{help}
+  p
+    font(size="5px")
+      div
+        table(width="100%")
+          tr
+            td(width="30%", align="left").
+              pages cursor:
+            td
+              a(id="link_first", href="/list_secured_frames/1").
+                <<
+            td
+              a(id="link_prev").
+                <
+            td
+              a(id="cur_page_less_2")
+            td
+              a(id="cur_page_less_1")
+            td
+              a(id="cur_page")
+            td
+              a(id="cur_page_plus_1")
+            td
+              a(id="cur_page_plus_2")
+            td
+              a(id="link_next").
+                >
+            td
+              a(id="link_last" href="#").
+                >>
+            td(width="30%").
+              &nbsp;
+      div(class="div-scroll")
+        table(id="secured_frame_tbl", width="100%", style="overflow:scroll;white-space:pre;")
+          tr
+            th(id="Name", style="background-color: #000")
+              | Name
+            th(id="TimeStamp", style="background-color: #000")
+              | TimeStamp
+            th(id="FrameType", style="background-color: #000").
+              Frame
+              Type
+            th(id="EcuName", style="background-color: #000").
+              ECU
+              Name
+            th(id="tMAC", style="background-color: #000")
+              | tMAC
+            th(id="DLC", style="background-color: #000")
+              | DLC
+            th(id="Payload", style="background-color: #000")
+              | Payload
+            th(id="FV", style="background-color: #000")
+              | FV
+            th(id="Msb", style="background-color: #000")
+              | Msb
+            th(id="Lsb", style="background-color: #000")
+              | Lsb
+            th(id="Pad", style="background-color: #000")
+              | Pad
+            th(id="Mac", style="background-color: #000")
+              | Mac
+            th(id="SyncFrameId", style="background-color: #000").
+              Sync
+              Frame
+  script(type="text/javascript")
+    | function localOnLoad() 
+    | {
+    |   alert(#{curPage});
+    |   var active_keys = #{activeKeys};
+    |   var scfd_frames = #{scfdFrames};
+    |   var prev_page = #{prevPage};
+    |   var cur_page = #{curPage};
+    |   var next_page = #{nextPage};
+    |   var last_page = #{lastPage};
+    |   var link_first_page = document.getElementById('link_first');
+    |   var link_prev_page = document.getElementById('link_prev');
+    | }
+    |   
