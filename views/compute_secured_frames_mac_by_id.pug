@@ -1,0 +1,71 @@
+extends layout
+
+block content
+  h1 
+    center
+      | Welcome to #{title}
+  font(size="3px", color="#aaf")
+    p(align="right")
+      | #{help}
+    form(ref="maccheck", id="maccheck", method="post", encType="multipart/form-data")
+      table(width="100%")
+        tr
+          td(align="right", width="50px")
+            label(class='labelform').
+              Frame ID:
+          td
+            input(id="frameid", title="Select the id of the frame to check MAC for  ...", name="frameid", accept="text/ascii")
+          td
+            img(id="ledValid", src="/images/LedMacUnknown.png")
+            img(id="ledUnknown", src="/images/LedMacValid.png")
+            img(id="ledInvalid", src="/images/LedMacInvalid.png")
+        tr
+          td.
+            Id
+          td.
+            Name
+          td.
+            Payload
+        tr
+          td
+            input(type="text", id="frame_id", minlength="6", maxlength="6", size="6")
+          td
+            input(type="text", id="frame_name", minlength="15", maxlength="25", size="20")
+          td
+            input(type="text", id="frame_payload", minlength="30", maxlength="80", size="64")
+              
+        tr
+          td
+            input(type="submit", title="Send the file to upload ...", class="rapr-button", value="File upload")
+          td.
+            &nbsp;
+          td
+            input(type="button", title="Cancel the file upload ...", class="rapr-button", value="Annulation", onclick="$('#releve').trigger('reset');")
+  script(type="text/javascript", src='/javascripts/tooltip.js')
+  script(type="text/javascript", src='/javascripts/spinner.js')
+  script(type="text/javascript")
+    | var active_keys = #{activeKeys};
+    | var options = #{formOptions};
+    | var form = document.getElementById('maccheck');
+    | var ledValid = document.getElementById('ledValid');
+    | var ledUnknown = document.getElementById('ledUnknown');
+    | var ledInvalid = document.getElementById('ledInvalid');
+    | function localOnLoad() 
+    | {
+    |   ledValid.style.visibility = 'hidden';
+    |   ledUnknown.style.visibility = 'visible';
+    |   ledInvalid.style.visibility = 'hidden';
+    |   document.getElementById('frameid').onsubmit = (event) =>
+    |   {
+    |     event.returnValue = true;
+    |     if (event.preventDefault && document.getElementById('frameId').value === '')
+    |     {
+    |       alert("Please select a valid frame id before submiting !");
+    |       event.preventDefault();
+    |       event.returnValue = false;
+    |     }
+    |     return(event.returnValue);
+    |   }
+    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
+    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
+    | }

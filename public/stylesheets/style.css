@@ -9,6 +9,15 @@ a {
   color: #00B7FF;
 }
 
+.page-cursor {
+    background-color: #35689F;
+    text-align: center;
+}
+
+.page-cursor td {
+    textAlign: center;
+}
+
 .div-scroll div.scroll {
     background-color: #fff;
     width: 1000px;
@@ -16,4 +25,48 @@ a {
     overflow: auto;
     text-align: left;
     padding: 10px;
+}
+
+input[type=text] {
+    padding: 12px 20px;
+    border-radius: 4px;
+    border: none;
+    border-bottom: 2px dotted #5657EF;
+    background-color: #5657EF;
+}
+
+input[type=button] {
+    padding: 12px 20px;
+    border-radius: 4px;
+    border: none;
+    border-bottom: 2px dotted #5657EF;
+    background-color: #56576F;
+    color: #FFFFFF;
+}
+
+.cancel input[type=button] {
+    padding: 12px 20px;
+    border-radius: 4px;
+    border: none;
+    border-bottom: 2px dotted #5657EF;
+    background-color: #56175F;
+    color: #FFFFFF;
+}
+
+input[type=submit] {
+    padding: 12px 20px;
+    border-radius: 4px;
+    border: none;
+    border-bottom: 2px dotted #5657EF;
+    background-color: #56175F;
+    color: #FFFFFF;
+}
+
+input[type=file] {
+    cursor: question;
+    padding: 12px 20px;
+    border-radius: 4px;
+    border: none;
+    border-bottom: 2px dotted #5657EF;
+    background-color: #5657EF;
 }
