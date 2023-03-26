@@ -248,70 +248,57 @@ var keystoredb =
                                             req.files = files;
                                             
                                             var log_file = req.files.log_file;
-                                            fs.readFile(
+
+                                            // First let's write file in DB repository
+                                            var targetFilePath = DbLogPath + "/" + log_file.originalFilename;
+                                            var newTargetFilePath = targetFilePath;
+                                            var fileCntr = 0;
+                                            var extension = path.extname(newTargetFilePath);
+                                            var name = path.basename(newTargetFilePath, extension);
+                                            while (fs.existsSync(newTargetFilePath))
+                                            {
+                                                fileCntr++;
+                                                newTargetFilePath =  DbLogPath + "/" + name + '_' + fileCntr + extension;
+                                            }
+                                            console.log("Renaming file '"+ log_file.filepath +"' to '"+ newTargetFilePath +"'...");
+                                            
+                                            fs.rename(
                                                 log_file.filepath,
-                                                'utf8',
-                                                (err, data) =>
+                                                newTargetFilePath,
+                                                function (err)
                                                 {
-                                                    // First let's write file in DB repository
-                                                    var targetFilePath = DbLogPath + "/" + log_file.originalFilename;
-                                                    var newTargetFilePath = targetFilePath;
-                                                    var fileCntr = 0;
-                                                    var extension = path.extname(newTargetFilePath);
-                                                    var name = path.basename(newTargetFilePath, extension);
-                                                    while (fs.existsSync(newTargetFilePath))
+                                                    if (err)
                                                     {
-                                                        fileCntr++;
-                                                        newTargetFilePath =  DbLogPath + "/" + name + '_' + fileCntr + extension;
+                                                        console.log("Couldn't rename file " + log_file.filepath + " !");
+                                                        next(err.status || 500);
+                                                        return;
                                                     }
-                                                    fs.rename(
-                                                        log_file.filepath,
-                                                        newTargetFilePath,
-                                                        function (err)
+                                                    
+                                                    var logdate, uuid, version;
+                                                    var logdate_found = false, uuid_found = false, version_found = false;
+                                                    var lines_processed = 0;
+                                                    const importDateRE = /^date (?<date>.*)$/;
+                                                    const uuidRE = /^\/\/ Measurement UUID: (?<uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/;
+                                                    const versionRE = /^\/\/ version (?<version>[0-9.]+)$/;
+                                                    var lineReader = new LineByLineReader(fs.createReadStream(newTargetFilePath));
+                                                    lineReader.on(
+                                                        'error',
+                                                        (err) =>
                                                         {
-                                                            if (err)
-                                                            {
-                                                                console.log("Couldn't rename file " + log_file.filepath + " !");
-                                                                next(err.status || 500);
-                                                                return;
-                                                            }
-                                                            const importDateRE = /^date (?<date>.*)$/;
-                                                            const uuidRE = /^\/\/ Measurement UUID: (?<uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/;
-                                                            const versionRE = /^\/\/ version (?<version>[0-9.]+)$/;
-                                                            var lines = data.toString().split(/\r?\n/);
-                                                            if (lines.length <= 1)
-                                                            {
-                                                                next(500);
-                                                                return;
-                                                            }
-                                                            var dateLine = lines.filter(elem => elem.match(importDateRE));
-                                                            var uuidLine = lines.filter(elem => elem.match(uuidRE));
-                                                            var versionLine = lines.filter(elem => elem.match(versionRE));
-                                                            var logdate, uuid, version;
-                                                            dateLine.map(
-                                                                (line) =>
-                                                                {
-                                                                    var fields = importDateRE.exec(line);
-                                                                    logdate = fields.groups.date;
-                                                                }
-                                                            );
-                                                            uuidLine.map(
-                                                                (line) =>
-                                                                {
-                                                                    var fields = uuidRE.exec(line);
-                                                                    uuid = fields.groups.uuid;
-                                                                }
-                                                            );
-                                                            versionLine.map(
-                                                                (line) =>
-                                                                {
-                                                                    var fields = versionRE.exec(line);
-                                                                    version = fields.groups.version;
-                                                                }
-                                                            );
+                                                            console.log("Error while processing '" + newTargetFilePath + "' !");
+                                                            next(err.status || 500);
+                                                            return;
+                                                        }
+                                                    );
+                                                    
+                                                    lineReader.on(
+                                                        'end',
+                                                        () =>
+                                                        {
+                                                            console.log("End of initial processing for file '"+ newTargetFilePath +"'");
                                                             keystoredb.run(
-                                                                "INSERT INTO LogFiles (Name, LogDate, ImportDate, Version, Size, LinesNb, UUID, Content)   \
-                                                                        VALUES        (   ?,       ?,          ?,       ?,    ?,       ?,    ?,       ?);",
+                                                                "INSERT INTO LogFiles (Name, LogDate, ImportDate, Version, Size, UUID)   \
+                                                                            VALUES        (   ?,       ?,          ?,       ?,    ?,    ?);",
                                                                 [
                                                                     path.basename(newTargetFilePath),
                                                                     logdate,
@@ -319,8 +306,7 @@ var keystoredb =
                                                                     version,
                                                                     log_file.size,
                                                                     lines.length,
-                                                                    uuid, 
-                                                                    data
+                                                                    uuid
                                                                 ],
                                                                 (err) =>
                                                                 {
@@ -329,6 +315,7 @@ var keystoredb =
                                                                         next(err.status || 500);
                                                                         return;
                                                                     }
+                                                                    
                                                                     res.render(
                                                                         'upload_log_files',
                                                                         {
@@ -341,6 +328,37 @@ var keystoredb =
                                                                     );
                                                                 }
                                                             );
+                                                        }
+                                                    );
+                                                    lineReader.on(
+                                                        'line',
+                                                        (line) =>
+                                                        {
+                                                            console.log(line);
+                                                            
+                                                            if (line.match(importDateRE))
+                                                            {
+                                                                var fields = importDateRE.exec(line);
+                                                                logdate = fields.groups.date;
+                                                                logdate_found = true;
+                                                            }
+                                                            if (line.match(uuidRE))
+                                                            {
+                                                                var fields = uuidRE.exec(line);
+                                                                uuid = fields.groups.uuid;
+                                                                uuid_found = true;
+                                                            }
+                                                            if (line.match(versionRE))
+                                                            {
+                                                                var fields = versionRE.exec(line);
+                                                                version = fields.groups.version;
+                                                                version_found = true;
+                                                            }
+                                                            lines_processed++;
+                                                            if ((logdate_found && uuid_found && version_found) || lines_processed > 10)
+                                                            {
+                                                                lineReader.stop();
+                                                            }
                                                         }
                                                     );
                                                 }
