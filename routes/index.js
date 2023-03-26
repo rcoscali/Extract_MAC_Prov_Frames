@@ -560,6 +560,7 @@ var keystoredb =
                         var provFrame = new Object;
                         var provFramesStart = new Array;
                         var parsingFrame = false;
+                        var payload = "";
 
                         // Prov Frame Processing line handler (onLine event handler for
                         // finding a prov frame start)
@@ -568,7 +569,6 @@ var keystoredb =
                             s.pause();
                             if (!parsingFrame)
                             {
-                                console.log("*** processProvFrames_OnLine");
                                 var fields;
                                 if ((fields = provFrameRE.exec(line)) != null)
                                 {
@@ -577,14 +577,21 @@ var keystoredb =
                                     parsingFrame = true;
                                     provFrame = {
                                         index: lineNr,
-                                        regex: provRE
+                                        regex: provRE,
+                                        Payload: '',
+                                        Parts: new Array
                                     };
                                     // Frame part index
                                     var fix = 0;
-                                    provFrame['Parts'] = new Array;
-                                    var payload = "";
-                                    if (fields.groups.data !== undefined)
-                                        provFrame['Parts'][fix]['Payload'] = fields.groups.data.replace(/ /g, '');
+                                    provFrame['Parts'][fix] = new Object;
+                                    if (fields.groups.Data !== undefined)
+                                    {
+                                        payload = fields.groups.Data.replace(/ /g, '');
+                                        provFrame['Parts'][fix]['Payload'] = payload;
+                                        provFrame['Payload'] = payload;
+                                    }
+                                    console.log("Start of frame payload: " + payload);
+                                    fix++;
                                 }
                                 lineNr++;
                                 s.resume();                    
@@ -593,7 +600,6 @@ var keystoredb =
                             {
                                 // Prov Frame Processing frame line handler (onLine event handler for
                                 // finding prov frames following first)
-                                console.log("*** processProvFrames_OnFrameLine");
                                 var fields;
                                 var renderParams;                            
                                                         
@@ -613,20 +619,26 @@ var keystoredb =
                                         provFrame['Parts'][fix]['Data'] = localpayload;
                                         result_log += "Data='" + provFrame['Parts'][fix]['Data'] + "' ";
                                         
-                                        // The first frame payload contains UDS addressing
-                                        provFrame['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
+                                        provFrame['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3);
+                                        
                                         result_log += "Payload='" + provFrame['Parts'][fix]['Payload'] + "' ";
                                         provFrame['Parts'][fix]['Tail'] = fields.groups.Tail;
                                         result_log += "Tail='" + provFrame['Parts'][fix]['Tail'] + "'\\n";
+                                        console.log("Adding payload: " + provFrame['Parts'][fix]['Payload']);
+
+                                        payload += provFrame['Parts'][fix]['Payload'];
+                                        provFrame['Payload'] = payload;
+
                                         if (provFrame['Parts'][fix]['Payload'].startsWith("010055"))
                                         {
                                             if (payload !== undefined && payload.length > 128)
                                                 payload = payload.substring(0, 128);
+                                            console.log("End of frame found for the final payload: " + payload);
                                             parsingFrame = false;
                                             frameNr++;
                                             // A frame just completed... switch back on finding a frame start
                                             var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
-                                                                 VALUES             (        ?,     ?);";
+                                                                     VALUES             (        ?,     ?);";
                                             keystoredb.run(
                                                 insertStmt,
                                                 [logFileID, provFrame['Payload']],
@@ -639,8 +651,6 @@ var keystoredb =
                                             );
                                             break;
                                         }
-                                        payload += provFrame['Parts'][fix]['Payload'];
-                                        provFrame['Payload'] = payload;
                                         result_log += "Frame #" + lineNr + " payload = '" + provFrame['Payload'] + "'\\n";
                                     }
                                 }
