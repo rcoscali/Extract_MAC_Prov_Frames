@@ -574,11 +574,11 @@ var keystoredb =
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 1
                                     };
-                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE id = ?";
-                                keystoredb.all(
+                                var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE id = ?";
+                                keystoredb.get(
                                     stmt,
                                     [logFileID],
-                                    (err, rows) =>
+                                    (err, row) =>
                                     {
                                         // Examples of logging entries in log files
                                         //
@@ -595,118 +595,143 @@ var keystoredb =
                                         }
                                         var index = 0;
 
-                                        var row = rows[0];
-                                        // For the found log file
-                                        if (row.Content == undefined)
-                                        {
-                                            next("Couldn't get log file content from DB");
-                                            return;
-                                        }
-                                        var lines = row.Content.split(/\r?\n/);
                                         console.log('==============================================================');
-                                        console.log('File \'' + row.Name + '\' has ' + lines.length + ' lines !');
+                                        console.log('File \'' + row.Name + '\' !');
                                         result_log += "==============================================================\\n";
-                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+                                        result_log += "File '" + row.Name + "' !\\n";
+
+                                        var logFilePath = path.join(DbLogPath, row.Name);
+                                        var linesNr = 0;
+
                                         var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
                                         var provFramesStart = new Array;
-                                        for (var i = 0; i < lines.length; i++)
-                                        {
-                                            var fields;
-                                            if ((fields = provFrameRE.exec(lines[i])))
-                                            {
-                                                result_log += "Found provisionning frame starting at line #" + i + "\\n";
-                                                var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
-                                                provFramesStart.push({index:i,regex:provRE});
-                                            }
-                                        }
                                         
-                                        var provFrames = new Array;
-                                        provFramesStart.map(
-                                            (provStart, ix) =>
-                                            {
-                                                // Frame part index
-                                                var fix = 0;
-                                                provFrames[ix] = new Object;
-                                                provFrames[ix]['Parts'] = new Array;
-                                                var payload = "";
-                                                
-                                                result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
-                                                
-                                                for (var i = provStart['index']; i < lines.length; i++, fix++)
-                                                {
-                                                    var fields;
-                                                    // If match
-                                                    if (fields = provStart['regex'].exec(lines[i]))
+                                        var stream =
+                                            fs.createReadStream(logFilePath)
+                                            .pipe(
+                                                es.split()
+                                            )
+                                            .pipe(
+                                                es.mapSync(
+                                                    (line) =>
                                                     {
-                                                        result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
-                                                        provFrames[ix]['Parts'][fix] = new Object;
-                                                        provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
-                                                        result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
-                                                        var localpayload = fields.groups.Data;
-                                                        provFrames[ix]['Parts'][fix]['Data'] = localpayload;
-                                                        result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
-                                                        // The first frame payload contains UDS addressing
-                                                        if (i == provStart['index'])
-                                                            provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
-                                                        else
-                                                            provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
-                                                        result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
-                                                        provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
-                                                        result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
-                                                        if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
+                                                        s.pause();
+                                                        var fields;
+                                                        if ((fields = provFrameRE.exec(lines[i])))
                                                         {
-                                                            if (payload.length > 128)
-                                                                payload = payload.substring(0, 128);
-                                                            break;
+                                                            result_log += "Found provisionning frame starting at line #" + i + "\\n";
+                                                            var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
+                                                            provFramesStart.push({index:i,regex:provRE});
                                                         }
-                                                        payload += provFrames[ix]['Parts'][fix]['Payload'];
+                                                        linesNr++;
+                                                        s.resume();
                                                     }
-                                                }
-                                                provFrames[ix]['Payload'] = payload;
-                                                result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
-                                                
-                                                // Update database by setting FramesExtracted flag to true
-                                                provFrames.map(
-                                                    (provFrame) =>
-                                                    {
-                                                        var updateStmt = "UPDATE LogFiles SET FramesExtracted='1' WHERE LogFiles.Name=?";
-                                                        keystoredb.run(
-                                                            updateStmt,
-                                                            [row.Name],
-                                                            (err) =>
-                                                            {
-                                                                if (err)
+                                                )
+                                                    .on(
+                                                        'error',
+                                                        (err) =>
+                                                        {
+                                                            console.log('Error while reading file.', err);
+                                                            next(err);
+                                                            return;
+                                                        }
+                                                    )
+                                                    .on(
+                                                        'end',
+                                                        () =>
+                                                        {
+                                                            console.log('Read entire file.');
+                                                            
+                                                            var provFrames = new Array;
+                                                            provFramesStart.map(
+                                                                (provStart, ix) =>
                                                                 {
-                                                                    next(err.status || 500);
-                                                                    return;
-                                                                }
-                                                                var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
-                                                                                         VALUES             (        ?,     ?);";
-                                                                keystoredb.run(
-                                                                    insertStmt,
-                                                                    [row.id, provFrame['Payload']],
-                                                                    (err) =>
+                                                                    // Frame part index
+                                                                    var fix = 0;
+                                                                    provFrames[ix] = new Object;
+                                                                    provFrames[ix]['Parts'] = new Array;
+                                                                    var payload = "";
+                                                                    
+                                                                    result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
+                                                                    
+                                                                    for (var i = provStart['index']; i < lines.length; i++, fix++)
                                                                     {
-                                                                        if (err)
+                                                                        var fields;
+                                                                        // If match
+                                                                        if (fields = provStart['regex'].exec(lines[i]))
                                                                         {
-                                                                            next(err.status || 500);
-                                                                            return;
+                                                                            result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
+                                                                            provFrames[ix]['Parts'][fix] = new Object;
+                                                                            provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
+                                                                            result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
+                                                                            var localpayload = fields.groups.Data;
+                                                                            provFrames[ix]['Parts'][fix]['Data'] = localpayload;
+                                                                            result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
+                                                                            // The first frame payload contains UDS addressing
+                                                                            if (i == provStart['index'])
+                                                                                provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
+                                                                            else
+                                                                                provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
+                                                                            result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
+                                                                            provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
+                                                                            result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
+                                                                            if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
+                                                                            {
+                                                                                if (payload.length > 128)
+                                                                                    payload = payload.substring(0, 128);
+                                                                                break;
+                                                                            }
+                                                                            payload += provFrames[ix]['Parts'][fix]['Payload'];
                                                                         }
                                                                     }
-                                                                );
-                                                            }
-                                                        );
-                                                    }
-                                                );
-                                            }
-                                        );
-                                        console.log("** result_log = \"" + result_log + "\"");
-                                        renderParams['result_log'] = result_log;
-                                        renderParams['status'] = "'Frames extracted from log file with id = " + renderParams['logFileID'] + "! Processing log is here after:'";
-                                        res.render(
-                                            'extract_mac_frames',
-                                            renderParams
-                                        );
+                                                                    provFrames[ix]['Payload'] = payload;
+                                                                    result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
+                                                                    
+                                                                    // Update database by setting FramesExtracted flag to true
+                                                                    provFrames.map(
+                                                                        (provFrame) =>
+                                                                        {
+                                                                            var updateStmt = "UPDATE LogFiles SET FramesExtracted='1' WHERE LogFiles.Name=?";
+                                                                            keystoredb.run(
+                                                                                updateStmt,
+                                                                                [row.Name],
+                                                                                (err) =>
+                                                                                {
+                                                                                    if (err)
+                                                                                    {
+                                                                                        next(err.status || 500);
+                                                                                        return;
+                                                                                    }
+                                                                                    var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
+                                                                                         VALUES             (        ?,     ?);";
+                                                                                    keystoredb.run(
+                                                                                        insertStmt,
+                                                                                        [row.id, provFrame['Payload']],
+                                                                                        (err) =>
+                                                                                        {
+                                                                                            if (err)
+                                                                                            {
+                                                                                                next(err.status || 500);
+                                                                                                return;
+                                                                                            }
+                                                                                        }
+                                                                                    );
+                                                                                }
+                                                                            );
+                                                                        }
+                                                                    );
+                                                                }
+                                                            );
+                                                            console.log("** result_log = \"" + result_log + "\"");
+                                                            renderParams['result_log'] = result_log;
+                                                            renderParams['status'] = "'Frames extracted from log file with id = " + renderParams['logFileID'] + "! Processing log is here after:'";
+                                                            res.render(
+                                                                'extract_mac_frames',
+                                                                renderParams
+                                                            );
+                                                        }
+                                                    )
+                                            ); 
                                     }
                                 );
                             }
@@ -738,7 +763,7 @@ var keystoredb =
                                 activeKeys['kMasterEcu'] = k_master_ecu;
 
                                 // Select all log files with FramesExtracted flag being false
-                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE FramesExtracted='0'";
+                                var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE FramesExtracted='0'";
                                 keystoredb.all(
                                     stmt,
                                     [],
@@ -772,74 +797,105 @@ var keystoredb =
                                         var index = 0;
                                         var framesNb = rows.length;
                                         
+                                        result_log += "==============================================================\\n";
+                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+                                        var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
+                                        var provFramesStart = new Array;
+
                                         // For each log file found
                                         rows.forEach(
                                             (row) =>
                                             {
                                                 var logFileID = row.id;
-                                                var lines = row.Content.toString().split(/\r?\n/);
-                                                result_log += "==============================================================\\n";
-                                                result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                                var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
-                                                var provFramesStart = new Array;
-                                                for (var i = 0; i < lines.length; i++)
-                                                {
-                                                    var fields;
-                                                    if ((fields = provFrameRE.exec(lines[i])))
-                                                    {
-                                                        result_log += "Found provisionning frame starting at line #" + i + "\\n";
-                                                        var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
-                                                        provFramesStart.push({index:i,regex:provRE});
-                                                    }
-                                                }
-                                                
-                                                var provFrames = new Array;
-                                                provFramesStart.map(
-                                                    (provStart, ix) =>
-                                                    {
-                                                        // Frame part index
-                                                        var fix = 0;
-                                                        provFrames[ix] = new Object;
-                                                        provFrames[ix]['Parts'] = new Array;
-                                                        var payload = "";
-                                                        
-                                                        result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
-                                                        
-                                                        for (var i = provStart['index']; i < lines.length; i++, fix++)
+                                                var logFilePath = path.join(DbLogPath, row.Name);
+                                                var lineNr = 0;
+
+                                                var s = fs.createReadStream(logFilePath)
+                                                    .pipe(es.split())
+                                                    .pipe(es.mapSync(
+                                                        (line) =>
                                                         {
+                                                            
+                                                            // pause the readstream
+                                                            s.pause();
+                                                            
                                                             var fields;
-                                                            // If match
-                                                            if (fields = provStart['regex'].exec(lines[i]))
+                                                            if ((fields = provFrameRE.exec(lines[i])))
                                                             {
-                                                                result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
-                                                                provFrames[ix]['Parts'][fix] = new Object;
-                                                                provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
-                                                                result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
-                                                                var localpayload = fields.groups.Data;
-                                                                provFrames[ix]['Parts'][fix]['Data'] = localpayload;
-                                                                result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
-                                                                // The first frame payload contains UDS addressing
-                                                                if (i == provStart['index'])
-                                                                    provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
-                                                                else
-                                                                    provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
-                                                                result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
-                                                                provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
-                                                                result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
-                                                                if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
-                                                                {
-                                                                    if (payload.length > 128)
-                                                                        payload = payload.substring(0, 128);
-                                                                    break;
-                                                                }
-                                                                payload += provFrames[ix]['Parts'][fix]['Payload'];
+                                                                result_log += "Found provisionning frame starting at line #" + i + "\\n";
+                                                                var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
+                                                                provFramesStart.push({index:i,regex:provRE});
                                                             }
+                                                            lineNr += 1;
+                                                            
+                                                            // process line here and call s.resume() when rdy
+                                                            // function below was for logging memory usage
+                                                            logMemoryUsage(lineNr);
+                                                            
+                                                            // resume the readstream, possibly from a callback
+                                                            s.resume();
                                                         }
-                                                        provFrames[ix]['Payload'] = payload;
-                                                        result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
-                                                        
-                                                        // Update database by setting FramesExtracted flag to true
-                                                        provFrames.map(
+                                                    )
+                                                          .on(
+                                                              'error',
+                                                              (err) =>
+                                                              {
+                                                                  console.log('Error while reading file.', err);
+                                                              }
+                                                          )
+                                                          .on(
+                                                              'end',
+                                                              () =>
+                                                              {
+                                                                  console.log('Read entire file.')
+
+                                                                  var provFrames = new Array;
+                                                                  provFramesStart.map(
+                                                                      (provStart, ix) =>
+                                                                      {
+                                                                          // Frame part index
+                                                                          var fix = 0;
+                                                                          provFrames[ix] = new Object;
+                                                                          provFrames[ix]['Parts'] = new Array;
+                                                                          var payload = "";
+                                                                          
+                                                                          result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
+                                                                          
+                                                                          for (var i = provStart['index']; i < lines.length; i++, fix++)
+                                                                          {
+                                                                              var fields;
+                                                                              // If match
+                                                                              if (fields = provStart['regex'].exec(lines[i]))
+                                                                              {
+                                                                                  result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
+                                                                                  provFrames[ix]['Parts'][fix] = new Object;
+                                                                                  provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
+                                                                                  result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
+                                                                                  var localpayload = fields.groups.Data;
+                                                                                  provFrames[ix]['Parts'][fix]['Data'] = localpayload;
+                                                                                  result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
+                                                                                  // The first frame payload contains UDS addressing
+                                                                                  if (i == provStart['index'])
+                                                                                      provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
+                                                                                  else
+                                                                                      provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
+                                                                                  result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
+                                                                                  provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
+                                                                                  result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
+                                                                                  if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
+                                                                                  {
+                                                                                      if (payload.length > 128)
+                                                                                          payload = payload.substring(0, 128);
+                                                                                      break;
+                                                                                  }
+                                                                                  payload += provFrames[ix]['Parts'][fix]['Payload'];
+                                                                              }
+                                                                          }
+                                                                          provFrames[ix]['Payload'] = payload;
+                                                                          result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
+                                                                          
+                                                                          // Update database by setting FramesExtracted flag to true
+                                                                          provFrames.map(
                                                             (provFrame) =>
                                                             {
                                                                 var updateStmt = "UPDATE LogFiles SET FramesExtracted=1 WHERE LogFiles.Name=?";
