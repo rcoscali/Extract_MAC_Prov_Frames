@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const stream = require('stream');
 const LineByLineReader = require('line-by-line')
+const es = require('event-stream');
 const bodyParser = require("body-parser");
 const sqlite3 = require('sqlite3').verbose();
 const {exec} = require("child_process");
@@ -265,7 +266,7 @@ var keystoredb =
                                             fs.rename(
                                                 log_file.filepath,
                                                 newTargetFilePath,
-                                                function (err)
+                                                (err) =>
                                                 {
                                                     if (err)
                                                     {
@@ -280,87 +281,96 @@ var keystoredb =
                                                     const importDateRE = /^date (?<date>.*)$/;
                                                     const uuidRE = /^\/\/ Measurement UUID: (?<uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/;
                                                     const versionRE = /^\/\/ version (?<version>[0-9.]+)$/;
-                                                    var lineReader = new LineByLineReader(fs.createReadStream(newTargetFilePath));
-                                                    lineReader.on(
-                                                        'error',
-                                                        (err) =>
-                                                        {
-                                                            console.log("Error while processing '" + newTargetFilePath + "' !");
-                                                            next(err.status || 500);
-                                                            return;
-                                                        }
-                                                    );
-                                                    
-                                                    lineReader.on(
-                                                        'end',
-                                                        () =>
-                                                        {
-                                                            console.log("End of initial processing for file '"+ newTargetFilePath +"'");
-                                                            keystoredb.run(
-                                                                "INSERT INTO LogFiles (Name, LogDate, ImportDate, Version, Size, UUID)   \
-                                                                            VALUES        (   ?,       ?,          ?,       ?,    ?,    ?);",
-                                                                [
-                                                                    path.basename(newTargetFilePath),
-                                                                    logdate,
-                                                                    (new Date()).toString(),
-                                                                    version,
-                                                                    log_file.size,
-                                                                    lines.length,
-                                                                    uuid
-                                                                ],
-                                                                (err) =>
+
+                                                    var s =
+                                                        fs.createReadStream(newTargetFilePath)
+                                                        .pipe(
+                                                            es.split()
+                                                        )
+                                                        .pipe(
+                                                            es.mapSync(
+                                                                (line) =>
                                                                 {
-                                                                    if (err)
+                                                                    // pause the readstream
+                                                                    s.pause();
+
+                                                                    console.log("#" + lines_processed + ": " + line);
+                                                            
+                                                                    if (line.match(importDateRE))
                                                                     {
-                                                                        next(err.status || 500);
-                                                                        return;
+                                                                        var fields = importDateRE.exec(line);
+                                                                        logdate = fields.groups.date;
+                                                                        logdate_found = true;
+                                                                    }
+                                                                    if (line.match(uuidRE))
+                                                                    {
+                                                                        var fields = uuidRE.exec(line);
+                                                                        uuid = fields.groups.uuid;
+                                                                        uuid_found = true;
+                                                                    }
+                                                                    if (line.match(versionRE))
+                                                                    {
+                                                                        var fields = versionRE.exec(line);
+                                                                        version = fields.groups.version;
+                                                                        version_found = true;
+                                                                    }
+                                                                    lines_processed++;
+                                                                    if ((logdate_found && uuid_found && version_found) || lines_processed > 10)
+                                                                    {
+                                                                        console.log("Found data for DB ... stoping ...");
+                                                                        s.end();
                                                                     }
                                                                     
-                                                                    res.render(
-                                                                        'upload_log_files',
+                                                                    // resume the readstream, possibly from a callback
+                                                                    s.resume();
+                                                                }
+                                                            ).on(
+                                                                'error',
+                                                                (err) =>
+                                                                {
+                                                                    console.log("Error while processing '" + newTargetFilePath + "' !");
+                                                                    next(err.status || 500);
+                                                                    return;
+                                                                }
+                                                            ).on(
+                                                                'end',
+                                                                () =>
+                                                                {
+                                                                    console.log("End of initial processing for file '"+ newTargetFilePath +"'");
+                                                                    keystoredb.run(
+                                                                        "INSERT INTO LogFiles (Name, LogDate, ImportDate, Version, Size, UUID)   \
+                                                                                VALUES        (   ?,       ?,          ?,       ?,    ?,    ?);",
+                                                                        [
+                                                                            path.basename(newTargetFilePath),
+                                                                            logdate,
+                                                                            (new Date()).toString(),
+                                                                            version,
+                                                                            log_file.size,
+                                                                            uuid
+                                                                        ],
+                                                                        (err) =>
                                                                         {
-                                                                            title: 'Upload a log file',
-                                                                            help: 'Upload, process and store a log file and its parameters for further MAC Prov frames extraction',
-                                                                            content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
-                                                                            activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-                                                                            accordionTab: 0
+                                                                            if (err)
+                                                                            {
+                                                                                next(err.status || 500);
+                                                                                return;
+                                                                            }
+                                                                            
+                                                                            res.render(
+                                                                                'upload_log_files',
+                                                                                {
+                                                                                    title: 'Upload a log file',
+                                                                                    help: 'Upload, process and store a log file and its parameters for further MAC Prov frames extraction',
+                                                                                    content: 'File ' + log_file.originalFilename + ' uploaded successfully !',
+                                                                                    activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                                                                    accordionTab: 0
+                                                                                }
+                                                                            );
                                                                         }
                                                                     );
                                                                 }
-                                                            );
-                                                        }
-                                                    );
-                                                    lineReader.on(
-                                                        'line',
-                                                        (line) =>
-                                                        {
-                                                            console.log(line);
-                                                            
-                                                            if (line.match(importDateRE))
-                                                            {
-                                                                var fields = importDateRE.exec(line);
-                                                                logdate = fields.groups.date;
-                                                                logdate_found = true;
-                                                            }
-                                                            if (line.match(uuidRE))
-                                                            {
-                                                                var fields = uuidRE.exec(line);
-                                                                uuid = fields.groups.uuid;
-                                                                uuid_found = true;
-                                                            }
-                                                            if (line.match(versionRE))
-                                                            {
-                                                                var fields = versionRE.exec(line);
-                                                                version = fields.groups.version;
-                                                                version_found = true;
-                                                            }
-                                                            lines_processed++;
-                                                            if ((logdate_found && uuid_found && version_found) || lines_processed > 10)
-                                                            {
-                                                                lineReader.stop();
-                                                            }
-                                                        }
-                                                    );
+                                                            )
+                                                        );
                                                 }
                                             );
                                         }
