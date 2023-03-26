@@ -10,10 +10,13 @@ block content
   p
     font(size="5px").
       #{content}
+  script(type="text/javascript" src="/javascripts/list_mac_can_frames_onLoad.js")
   script(type="text/javascript")
+    |
     | var active_keys = #{activeKeys};
     | function localOnLoad() 
     | {
     |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
     |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
     | }
+    |

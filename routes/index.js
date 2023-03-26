@@ -10,7 +10,6 @@ const formidable = require('formidable');
 const path = require('path');
 const fs = require('fs');
 const stream = require('stream');
-const LineByLineReader = require('line-by-line')
 const es = require('event-stream');
 const bodyParser = require("body-parser");
 const sqlite3 = require('sqlite3').verbose();
@@ -408,8 +407,7 @@ var keystoredb =
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
-                                var stmt = "SELECT id, Name, LogDate, ImportDate, Version, Size, LinesNb, " +
-                                    "UUID, FramesExtracted, SecuredFramesExtracted FROM LogFiles";
+                                var stmt = "SELECT id, Name, LogDate, ImportDate, Version, Size, UUID, ProvFramesExtracted, SecuredFramesExtracted FROM LogFiles";
                                 keystoredb.all(
                                     stmt,
                                     [],
@@ -446,7 +444,7 @@ var keystoredb =
                                                     "Size:"+row.Size+","+
                                                     "LinesNb:"+row.LinesNb+","+
                                                     "UUID:'"+row.UUID+"',"+
-                                                    "FramesExtracted:"+(row.FramesExtracted ? "true" : "false")+","+
+                                                    "ProvFramesExtracted:"+(row.ProvFramesExtracted ? "true" : "false")+","+
                                                     "SecuredFramesExtracted:"+(row.SecuredFramesExtracted ? "true" : "false")+"}"+(lastRow ? "]" : ",");
                                                 index++;
                                             }
@@ -478,6 +476,12 @@ var keystoredb =
                             "SELECT MacEcu, MasterEcu FROM ActiveKeys",
                             (err, key) =>
                             {
+                                if (err)
+                                {
+                                    console.trace("Error on statement: SELECT MacEcu, MasterEcu FROM ActiveKeys");
+                                    next(err.status || 500);
+                                    return;
+                                }
                                 if (key != undefined)
                                 {
                                     k_mac_ecu = key.MacEcu;
@@ -495,6 +499,7 @@ var keystoredb =
                                     {
                                         if (err)
                                         {
+                                            console.trace("Error while reading directory '" + DbLogPath + "'");
                                             next(err.status || 500);
                                             return;
                                         }
@@ -507,6 +512,7 @@ var keystoredb =
                                                 {
                                                     if (err)
                                                     {
+                                                        console.trace("Error while unlinking file '" + path.join(DbLogPath, file) + "'");
                                                         next(err.status || 500);
                                                         return;
                                                     }
@@ -538,411 +544,350 @@ var keystoredb =
                  * ========================================================================================================================= *
                  */
 
-                /* ========================================================================================================================= */
-                /* GET /extract_mac_frames/:logFileId                                                                                        */
-                /* ========================================================================================================================= */
-                router.get(
-                    '/extract_mac_frames/:logFileId',
-                    (req, res, next) =>
+                /* Closure for prov frame extraction */
+                ((root) =>
                     {
-                        console.log("*** GET /extract_mac_frames/:logFileId");
+                        // Prov Frame extraction processing variables
+                        var index = 0;
+                        var lineNr = 0;
+                        var frameNr = 0;                        
                         var result_log = "";
-                        var activeKeys = new Object;
-                        var k_mac_ecu = "Not Set !";
-                        var k_master_ecu = "Not Set !";
-                        keystoredb.get(
-                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-                            (err, key) =>
-                            {
-                                if (key != undefined)
-                                {
-                                    k_mac_ecu = key.MacEcu;
-                                    k_master_ecu = key.MasterEcu;
-                                }
-                                activeKeys['kMacEcu'] = k_mac_ecu;
-                                activeKeys['kMasterEcu'] = k_master_ecu;
+                        var logFileName;
+                        var logFileID;
+                        var response;
+                        
+                        var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
+                        var provFrame = new Object;
+                        var provFramesStart = new Array;
+                        var parsingFrame = false;
 
-                                // Select log file with id :logFileId with FramesExtracted flag being false
-                                // Initialization of parameters for rendering the page
-                                var logFileID = Number.parseInt(req.params['logFileId']);
-                                var renderParams =
-                                    {
-                                        title: 'Extract MAC Prov frames',
-                                        help: 'Extract MAC Prov frames from a selected log file in DB',
-                                        logFileID: req.params['logFileId'],
-                                        status: "",
-                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-                                        accordionTab: 1
+                        // Prov Frame Processing line handler (onLine event handler for
+                        // finding a prov frame start)
+                        function processProvFrames_OnLine(line)
+                        {
+                            s.pause();
+                            if (!parsingFrame)
+                            {
+                                console.log("*** processProvFrames_OnLine");
+                                var fields;
+                                if ((fields = provFrameRE.exec(line)) != null)
+                                {
+                                    result_log += "Found provisionning frame starting at line #" + lineNr + "\\n";
+                                    var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
+                                    parsingFrame = true;
+                                    provFrame = {
+                                        index: lineNr,
+                                        regex: provRE
                                     };
-                                var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE id = ?";
-                                keystoredb.get(
-                                    stmt,
-                                    [logFileID],
-                                    (err, row) =>
+                                    // Frame part index
+                                    var fix = 0;
+                                    provFrame['Parts'] = new Array;
+                                    var payload = "";
+                                    if (fields.groups.data !== undefined)
+                                        provFrame['Parts'][fix]['Payload'] = fields.groups.data.replace(/ /g, '');
+                                }
+                                lineNr++;
+                                s.resume();                    
+                            }
+                            else
+                            {
+                                // Prov Frame Processing frame line handler (onLine event handler for
+                                // finding prov frames following first)
+                                console.log("*** processProvFrames_OnFrameLine");
+                                var fields;
+                                var renderParams;                            
+                                                        
+                                result_log += "Extracting frame #" + frameNr + " at line #" + provFrame['index'] + " with RE: /" + provFrame['regex'] + "\\n";
+
+                                do
+                                {
+                                    var fields;
+                                    // If match
+                                    if ((fields = provFrame['regex'].exec(line)) != null)
                                     {
-                                        // Examples of logging entries in log files
-                                        //
-                                        //   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c
-                                        // 8.191 1 7C3             Rx   d 8 02 10 03 00 00 00 00 00
-                                        //   7.157965 CANFD   2 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 02 3e 00 55 55 55 55 55   104657  132   323000 a800f7a3 4ba00150 4b280150 20002776 2000091c
-                                        //   0.007142 CANFD   1 Rx        192  ADAS_A10C_FD                     1 0 8  8 00 00 50 04 7f ff 00 10   103656  136   303000 980150f4 4ba00150 4b280150 20002776 2000091c
-                                        //   0.002801 CANFD   1 Rx        25e  ADASISv2_A101_FD                 1 0 8  8 00 00 00 00 00 00 00 00   105156  139   303000 f800b73d 4ba00150 4b280150 20002776 2000091c
-                                        //   
+                                        result_log += "Adding payload for frame #" + lineNr + " from line #" + lineNr + ": ";
+                                        provFrame['Parts'][fix] = new Object;
+                                        provFrame['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
+                                        result_log += "Timestamp='" + provFrame['Parts'][fix]['Timestamp'] + "' ";
+                                        var localpayload = fields.groups.Data;
+                                        provFrame['Parts'][fix]['Data'] = localpayload;
+                                        result_log += "Data='" + provFrame['Parts'][fix]['Data'] + "' ";
+                                        
+                                        // The first frame payload contains UDS addressing
+                                        provFrame['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
+                                        result_log += "Payload='" + provFrame['Parts'][fix]['Payload'] + "' ";
+                                        provFrame['Parts'][fix]['Tail'] = fields.groups.Tail;
+                                        result_log += "Tail='" + provFrame['Parts'][fix]['Tail'] + "'\\n";
+                                        if (provFrame['Parts'][fix]['Payload'].startsWith("010055"))
+                                        {
+                                            if (payload !== undefined && payload.length > 128)
+                                                payload = payload.substring(0, 128);
+                                            parsingFrame = false;
+                                            frameNr++;
+                                            // A frame just completed... switch back on finding a frame start
+                                            var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
+                                                                 VALUES             (        ?,     ?);";
+                                            keystoredb.run(
+                                                insertStmt,
+                                                [logFileID, provFrame['Payload']],
+                                                (err) =>
+                                                {
+                                                    if (err)
+                                                        throw new Error();
+                                                    provFrame = new Object;                                                
+                                                }
+                                            );
+                                            break;
+                                        }
+                                        payload += provFrame['Parts'][fix]['Payload'];
+                                        provFrame['Payload'] = payload;
+                                        result_log += "Frame #" + lineNr + " payload = '" + provFrame['Payload'] + "'\\n";
+                                    }
+                                }
+                                while(0);
+                                lineNr++;
+                                s.resume();                    
+                            }
+                        }
+
+                        // Prov Frame Processing end handler (onEnd event handler)
+                        // Frames have been persisted in DB
+                        // Now change 
+                        function processProvFrames_OnEnd()
+                        {
+                            console.log("*** processProvFrames_OnEnd");
+                            // Update database by setting ProvFramesExtracted flag to true
+                            var updateStmt = "UPDATE LogFiles SET ProvFramesExtracted='1', LinesNb=? WHERE LogFiles.Name=?";
+                            keystoredb.run(
+                                updateStmt,
+                                [logFileName, lineNr],
+                                (err) =>
+                                {
+                                    if (err)
+                                        throw new Error();
+                                    
+                                    console.log('*END* Entire file was read...');
+                                    console.log("** result_log = \"" + result_log + "\"");
+                                    renderParams['result_log'] = result_log;
+                                    renderParams['status'] = "'Frames extracted from log file with id = " + renderParams['logFileID'] + "! Processing log is here after:'";
+                                    response.render(
+                                        'extract_mac_frames',
+                                        renderParams
+                                    );
+                                }
+                            )
+                        }
+
+                        /* ========================================================================================================================= */
+                        /* GET /extract_mac_frames/:logFileId                                                                                        */
+                        /* ========================================================================================================================= */
+                        router.get(
+                            '/extract_mac_frames/:logFileId',
+                            (req, res, next) =>
+                            {
+                                console.log("*** GET /extract_mac_frames/:logFileId");
+                                var activeKeys = new Object;
+                                var k_mac_ecu = "Not Set !";
+                                var k_master_ecu = "Not Set !";
+                                keystoredb.get(
+                                    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                                    (err, key) =>
+                                    {
                                         if (err)
                                         {
+                                            console.trace("Error on statement: SELECT MacEcu, MasterEcu FROM ActiveKeys");
                                             next(err.status || 500);
                                             return;
                                         }
-                                        var index = 0;
+                                        if (key != undefined)
+                                        {
+                                            k_mac_ecu = key.MacEcu;
+                                            k_master_ecu = key.MasterEcu;
+                                        }
+                                        activeKeys['kMacEcu'] = k_mac_ecu;
+                                        activeKeys['kMasterEcu'] = k_master_ecu;
 
-                                        console.log('==============================================================');
-                                        console.log('File \'' + row.Name + '\' !');
-                                        result_log += "==============================================================\\n";
-                                        result_log += "File '" + row.Name + "' !\\n";
+                                        // Select log file with id :logFileId with ProvFramesExtracted flag being false
+                                        // Initialization of parameters for rendering the page
+                                        logFileID = Number.parseInt(req.params['logFileId']);
+                                        renderParams =
+                                            {
+                                                title: 'Extract MAC Prov frames',
+                                                help: 'Extract MAC Prov frames from a selected log file in DB',
+                                                logFileID: logFileID,
+                                                status: "",
+                                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                                accordionTab: 1
+                                            };
+                                        var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE id = ?";
+                                        keystoredb.get(
+                                            stmt,
+                                            [logFileID],
+                                            (err, row) =>
+                                            {
+                                                // Examples of logging entries in log files
+                                                //
+                                                //   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c
+                                                // 8.191 1 7C3             Rx   d 8 02 10 03 00 00 00 00 00
+                                                //   7.157965 CANFD   2 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 02 3e 00 55 55 55 55 55   104657  132   323000 a800f7a3 4ba00150 4b280150 20002776 2000091c
+                                                //   0.007142 CANFD   1 Rx        192  ADAS_A10C_FD                     1 0 8  8 00 00 50 04 7f ff 00 10   103656  136   303000 980150f4 4ba00150 4b280150 20002776 2000091c
+                                                //   0.002801 CANFD   1 Rx        25e  ADASISv2_A101_FD                 1 0 8  8 00 00 00 00 00 00 00 00   105156  139   303000 f800b73d 4ba00150 4b280150 20002776 2000091c
+                                                //   
+                                                if (err)
+                                                {
+                                                    console.trace("Error on statement: " + stmt);
+                                                    next(err.status || 500);
+                                                    return;
+                                                }
 
-                                        var logFilePath = path.join(DbLogPath, row.Name);
-                                        var linesNr = 0;
+                                                console.log('==============================================================');
+                                                console.log('File \'' + row.Name + '\' !');
+                                                result_log += "==============================================================\\n";
+                                                result_log += "File '" + row.Name + "' !\\n";
 
-                                        var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
-                                        var provFramesStart = new Array;
-                                        
-                                        var stream =
-                                            fs.createReadStream(logFilePath)
-                                            .pipe(
-                                                es.split()
-                                            )
-                                            .pipe(
-                                                es.mapSync(
-                                                    (line) =>
-                                                    {
-                                                        s.pause();
-                                                        var fields;
-                                                        if ((fields = provFrameRE.exec(lines[i])))
-                                                        {
-                                                            result_log += "Found provisionning frame starting at line #" + i + "\\n";
-                                                            var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
-                                                            provFramesStart.push({index:i,regex:provRE});
-                                                        }
-                                                        linesNr++;
-                                                        s.resume();
-                                                    }
-                                                )
-                                                    .on(
-                                                        'error',
-                                                        (err) =>
-                                                        {
-                                                            console.log('Error while reading file.', err);
-                                                            next(err);
-                                                            return;
-                                                        }
+                                                var logFilePath = path.join(DbLogPath, row.Name);
+
+                                                var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
+                                                var provFrame = new Object;
+                                                var provFramesStart = new Array;
+                                                var parsingFrame = false;
+                                                response = res;
+                                                
+                                                s =
+                                                    fs.createReadStream(logFilePath)
+                                                    .pipe(
+                                                        es.split()
                                                     )
-                                                    .on(
-                                                        'end',
-                                                        () =>
-                                                        {
-                                                            console.log('Read entire file.');
-                                                            
-                                                            var provFrames = new Array;
-                                                            provFramesStart.map(
-                                                                (provStart, ix) =>
+                                                    .pipe(
+                                                        es.mapSync(
+                                                            processProvFrames_OnLine
+                                                        )
+                                                            .on(
+                                                                'error',
+                                                                // Cannot put the router in the closure, then put error handler here
+                                                                (err) =>
                                                                 {
-                                                                    // Frame part index
-                                                                    var fix = 0;
-                                                                    provFrames[ix] = new Object;
-                                                                    provFrames[ix]['Parts'] = new Array;
-                                                                    var payload = "";
-                                                                    
-                                                                    result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
-                                                                    
-                                                                    for (var i = provStart['index']; i < lines.length; i++, fix++)
-                                                                    {
-                                                                        var fields;
-                                                                        // If match
-                                                                        if (fields = provStart['regex'].exec(lines[i]))
-                                                                        {
-                                                                            result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
-                                                                            provFrames[ix]['Parts'][fix] = new Object;
-                                                                            provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
-                                                                            result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
-                                                                            var localpayload = fields.groups.Data;
-                                                                            provFrames[ix]['Parts'][fix]['Data'] = localpayload;
-                                                                            result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
-                                                                            // The first frame payload contains UDS addressing
-                                                                            if (i == provStart['index'])
-                                                                                provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
-                                                                            else
-                                                                                provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
-                                                                            result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
-                                                                            provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
-                                                                            result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
-                                                                            if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
-                                                                            {
-                                                                                if (payload.length > 128)
-                                                                                    payload = payload.substring(0, 128);
-                                                                                break;
-                                                                            }
-                                                                            payload += provFrames[ix]['Parts'][fix]['Payload'];
-                                                                        }
-                                                                    }
-                                                                    provFrames[ix]['Payload'] = payload;
-                                                                    result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
-                                                                    
-                                                                    // Update database by setting FramesExtracted flag to true
-                                                                    provFrames.map(
-                                                                        (provFrame) =>
-                                                                        {
-                                                                            var updateStmt = "UPDATE LogFiles SET FramesExtracted='1' WHERE LogFiles.Name=?";
-                                                                            keystoredb.run(
-                                                                                updateStmt,
-                                                                                [row.Name],
-                                                                                (err) =>
-                                                                                {
-                                                                                    if (err)
-                                                                                    {
-                                                                                        next(err.status || 500);
-                                                                                        return;
-                                                                                    }
-                                                                                    var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
-                                                                                         VALUES             (        ?,     ?);";
-                                                                                    keystoredb.run(
-                                                                                        insertStmt,
-                                                                                        [row.id, provFrame['Payload']],
-                                                                                        (err) =>
-                                                                                        {
-                                                                                            if (err)
-                                                                                            {
-                                                                                                next(err.status || 500);
-                                                                                                return;
-                                                                                            }
-                                                                                        }
-                                                                                    );
-                                                                                }
-                                                                            );
-                                                                        }
-                                                                    );
+                                                                    // Prov Frame Processing error handler
+                                                                    console.trace('Error while reading file.', err);
+                                                                    next(err.status || 500);
+                                                                    return;
                                                                 }
-                                                            );
-                                                            console.log("** result_log = \"" + result_log + "\"");
-                                                            renderParams['result_log'] = result_log;
-                                                            renderParams['status'] = "'Frames extracted from log file with id = " + renderParams['logFileID'] + "! Processing log is here after:'";
-                                                            res.render(
-                                                                'extract_mac_frames',
-                                                                renderParams
-                                                            );
-                                                        }
-                                                    )
-                                            ); 
+                                                            )
+                                                            .on(
+                                                                'end',
+                                                                processProvFrames_OnEnd
+                                                            )
+                                                    );
+                                            }
+                                        );
                                     }
                                 );
                             }
                         );
-                    }
-                );
 
-                /* ========================================================================================================================= */
-                /* GET /extract_mac_frames                                                                                                   */
-                /* ========================================================================================================================= */
-                router.get(
-                    '/extract_mac_frames',
-                    (req, res, next) =>
-                    {
-                        console.log("*** GET /extract_mac_frames");
-                        var activeKeys = new Object;
-                        var k_mac_ecu = "Not Set !";
-                        var k_master_ecu = "Not Set !";
-                        keystoredb.get(
-                            "SELECT MacEcu, MasterEcu FROM ActiveKeys",
-                            (err, key) =>
+                        /* ========================================================================================================================= */
+                        /* GET /extract_mac_frames                                                                                                   */
+                        /* ========================================================================================================================= */
+                        router.get(
+                            '/extract_mac_frames',
+                            (req, res, next) =>
                             {
-                                if (key != undefined)
-                                {
-                                    k_mac_ecu = key.MacEcu;
-                                    k_master_ecu = key.MasterEcu;
-                                }
-                                activeKeys['kMacEcu'] = k_mac_ecu;
-                                activeKeys['kMasterEcu'] = k_master_ecu;
-
-                                // Select all log files with FramesExtracted flag being false
-                                var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE FramesExtracted='0'";
-                                keystoredb.all(
-                                    stmt,
-                                    [],
-                                    (err, rows) =>
+                                console.log("*** GET /extract_mac_frames");
+                                var activeKeys = new Object;
+                                var k_mac_ecu = "Not Set !";
+                                var k_master_ecu = "Not Set !";
+                                keystoredb.get(
+                                    "SELECT MacEcu, MasterEcu FROM ActiveKeys",
+                                    (err, key) =>
                                     {
-                                        // Examples of logging entries in log file
-                                        //
-                                        //   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c
-                                        // 8.191 1 7C3             Rx   d 8 02 10 03 00 00 00 00 00
-                                        //   7.157965 CANFD   2 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 02 3e 00 55 55 55 55 55   104657  132   323000 a800f7a3 4ba00150 4b280150 20002776 2000091c
-                                        //   0.007142 CANFD   1 Rx        192  ADAS_A10C_FD                     1 0 8  8 00 00 50 04 7f ff 00 10   103656  136   303000 980150f4 4ba00150 4b280150 20002776 2000091c
-                                        //   0.002801 CANFD   1 Rx        25e  ADASISv2_A101_FD                 1 0 8  8 00 00 00 00 00 00 00 00   105156  139   303000 f800b73d 4ba00150 4b280150 20002776 2000091c
-                                        //   
-                                        var result_log = "";
-                                        if (err)
+                                        if (key != undefined)
                                         {
-                                            next(err.status || 500);
-                                            return;
+                                            k_mac_ecu = key.MacEcu;
+                                            k_master_ecu = key.MasterEcu;
                                         }
-                                        // Initialization of parameters for rendering the page
-                                        var renderParams =
-                                            {
-                                                title: 'Extract MAC Prov frames',
-                                                help: 'Extract MAC Prov frames from a selected log file in DB',
-                                                activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
-                                                status: "",
-                                                logFileID: 0,
-                                                result_log: "",
-                                                accordionTab: 1
-                                            };
-                                        var index = 0;
-                                        var framesNb = rows.length;
+                                        activeKeys['kMacEcu'] = k_mac_ecu;
+                                        activeKeys['kMasterEcu'] = k_master_ecu;
                                         
-                                        result_log += "==============================================================\\n";
-                                        result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                        var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
-                                        var provFramesStart = new Array;
-
-                                        // For each log file found
-                                        rows.forEach(
-                                            (row) =>
+                                        // Select all log files with ProvFramesExtracted flag being false
+                                        var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE ProvFramesExtracted='0'";
+                                        keystoredb.all(
+                                            stmt,
+                                            [],
+                                            (err, rows) =>
                                             {
-                                                var logFileID = row.id;
-                                                var logFilePath = path.join(DbLogPath, row.Name);
-                                                var lineNr = 0;
-
-                                                var s = fs.createReadStream(logFilePath)
-                                                    .pipe(es.split())
-                                                    .pipe(es.mapSync(
-                                                        (line) =>
-                                                        {
-                                                            
-                                                            // pause the readstream
-                                                            s.pause();
-                                                            
-                                                            var fields;
-                                                            if ((fields = provFrameRE.exec(lines[i])))
-                                                            {
-                                                                result_log += "Found provisionning frame starting at line #" + i + "\\n";
-                                                                var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
-                                                                provFramesStart.push({index:i,regex:provRE});
-                                                            }
-                                                            lineNr += 1;
-                                                            
-                                                            // process line here and call s.resume() when rdy
-                                                            // function below was for logging memory usage
-                                                            logMemoryUsage(lineNr);
-                                                            
-                                                            // resume the readstream, possibly from a callback
-                                                            s.resume();
-                                                        }
-                                                    )
-                                                          .on(
-                                                              'error',
-                                                              (err) =>
-                                                              {
-                                                                  console.log('Error while reading file.', err);
-                                                              }
-                                                          )
-                                                          .on(
-                                                              'end',
-                                                              () =>
-                                                              {
-                                                                  console.log('Read entire file.')
-
-                                                                  var provFrames = new Array;
-                                                                  provFramesStart.map(
-                                                                      (provStart, ix) =>
-                                                                      {
-                                                                          // Frame part index
-                                                                          var fix = 0;
-                                                                          provFrames[ix] = new Object;
-                                                                          provFrames[ix]['Parts'] = new Array;
-                                                                          var payload = "";
-                                                                          
-                                                                          result_log += "Extracting frame #" + ix + " at line #" + provStart['index'] + " with RE: /" + provStart['regex'] + "\\n";
-                                                                          
-                                                                          for (var i = provStart['index']; i < lines.length; i++, fix++)
-                                                                          {
-                                                                              var fields;
-                                                                              // If match
-                                                                              if (fields = provStart['regex'].exec(lines[i]))
-                                                                              {
-                                                                                  result_log += "Adding payload for frame #" + ix + " from line #" + i + ": ";
-                                                                                  provFrames[ix]['Parts'][fix] = new Object;
-                                                                                  provFrames[ix]['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
-                                                                                  result_log += "Timestamp='" + provFrames[ix]['Parts'][fix]['Timestamp'] + "' ";
-                                                                                  var localpayload = fields.groups.Data;
-                                                                                  provFrames[ix]['Parts'][fix]['Data'] = localpayload;
-                                                                                  result_log += "Data='" + provFrames[ix]['Parts'][fix]['Data'] + "' ";
-                                                                                  // The first frame payload contains UDS addressing
-                                                                                  if (i == provStart['index'])
-                                                                                      provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(13, localpayload.length);
-                                                                                  else
-                                                                                      provFrames[ix]['Parts'][fix]['Payload'] = localpayload.replace(/ /g, "").substring(3, localpayload.length);
-                                                                                  result_log += "Payload='" + provFrames[ix]['Parts'][fix]['Payload'] + "' ";
-                                                                                  provFrames[ix]['Parts'][fix]['Tail'] = fields.groups.Tail;
-                                                                                  result_log += "Tail='" + provFrames[ix]['Parts'][fix]['Tail'] + "'\\n";
-                                                                                  if (provFrames[ix]['Parts'][fix]['Payload'].startsWith("010055"))
-                                                                                  {
-                                                                                      if (payload.length > 128)
-                                                                                          payload = payload.substring(0, 128);
-                                                                                      break;
-                                                                                  }
-                                                                                  payload += provFrames[ix]['Parts'][fix]['Payload'];
-                                                                              }
-                                                                          }
-                                                                          provFrames[ix]['Payload'] = payload;
-                                                                          result_log += "Frame #" + ix + " payload = '" + provFrames[ix]['Payload'] + "'\\n";
-                                                                          
-                                                                          // Update database by setting FramesExtracted flag to true
-                                                                          provFrames.map(
-                                                            (provFrame) =>
-                                                            {
-                                                                var updateStmt = "UPDATE LogFiles SET FramesExtracted=1 WHERE LogFiles.Name=?";
-                                                                keystoredb.run(
-                                                                    updateStmt,
-                                                                    [row.Name],
-                                                                    (err) =>
-                                                                    {
-                                                                        if (err)
+                                                // Examples of logging entries in log file
+                                                //
+                                                //   19.232049 CANFD   1 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 10 44 31 01 02 53 00 00   106156  135   303000 c80016cf 4ba00150 4b280150 20002776 2000091c
+                                                // 8.191 1 7C3             Rx   d 8 02 10 03 00 00 00 00 00
+                                                //   7.157965 CANFD   2 Rx        7c3  DTOOL_to_ADAS_FD                 1 0 8  8 02 3e 00 55 55 55 55 55   104657  132   323000 a800f7a3 4ba00150 4b280150 20002776 2000091c
+                                                //   0.007142 CANFD   1 Rx        192  ADAS_A10C_FD                     1 0 8  8 00 00 50 04 7f ff 00 10   103656  136   303000 980150f4 4ba00150 4b280150 20002776 2000091c
+                                                //   0.002801 CANFD   1 Rx        25e  ADASISv2_A101_FD                 1 0 8  8 00 00 00 00 00 00 00 00   105156  139   303000 f800b73d 4ba00150 4b280150 20002776 2000091c
+                                                //   
+                                                if (err)
+                                                {
+                                                    next(err.status || 500);
+                                                    return;
+                                                }
+                                                // Initialization of parameters for rendering the page
+                                                renderParams =
+                                                    {
+                                                        title: 'Extract MAC Prov frames',
+                                                        help: 'Extract MAC Prov frames from a selected log file in DB',
+                                                        activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
+                                                        status: "",
+                                                        result_log: "",
+                                                        accordionTab: 1
+                                                    };
+                                                
+                                                var framesNb = rows.length;
+                                                // For each log file found
+                                                rows.forEach(
+                                                    (row) =>
+                                                    {
+                                                        result_log += "==============================================================\\n";
+                                                        result_log += "File '" + row.Name + "!\\n";
+                                                        var provFrameRE  = /^ ? ?(?<Timestamp>[0-9.]*) (?<ProvRE>([A-Z]+)? *[12]? ?Rx *[0-9a-zA-Z]+  (?<Name>DTOOL_to_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-zA-Z0-9] *(?<Data>[ 0-9a-zA-Z]+31 01 02 53[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$/;
+                                                        var provFramesStart = new Array;
+                                                        var provFrame;
+                                                        var parsingFrame = false;
+                                                        var logFileID = row.id;
+                                                        var logFilePath = path.join(DbLogPath, row.Name);
+                                                        logFileName = row.Name;
+                                                        var lineNr = 0;
+                                                        response = res;
+                                                        
+                                                        s = fs.createReadStream(logFilePath)
+                                                            .pipe(es.split())
+                                                            .pipe(
+                                                                es.mapSync(
+                                                                    processProvFrames_OnLine
+                                                                )
+                                                                    .on(
+                                                                        'error',
+                                                                        // Cannot put the router in the closure, then put error handler here
+                                                                        (err) =>
                                                                         {
+                                                                            // Prov Frame Processing error handler
+                                                                            console.trace('Error while reading file.', err);
                                                                             next(err.status || 500);
                                                                             return;
                                                                         }
-                                                                        var insertStmt = "INSERT INTO MACProvFrames (LogFileId, Frame) \
-                                                                                                 VALUES             (        ?,     ?);";
-                                                                        keystoredb.run(
-                                                                            insertStmt,
-                                                                            [row.id, provFrame['Payload']],
-                                                                            (err) =>
-                                                                            {
-                                                                                if (err)
-                                                                                {
-                                                                                    next(err.status || 500);
-                                                                                    return;
-                                                                                }
-                                                                            }
-                                                                        );
-                                                                    }
-                                                                );
-                                                            }
-                                                        );
+                                                                    )
+                                                                    .on(
+                                                                        'end',
+                                                                        processProvFrames_OnEnd
+                                                                    )
+                                                                 );
                                                     }
                                                 );
                                             }
                                         );
-                                        renderParams['result_log'] = result_log;
-                                        renderParams['status'] = framesNb + " Frames extracted from log files ! Processing log is here after:";
-                                        res.render(
-                                            'extract_mac_frames',
-                                            renderParams
-                                        );
                                     }
                                 );
                             }
                         );
                     }
-                );
+                )(this);
                 
                 /* ========================================================================================================================= */
                 /* GET /list_mac_prov_frame/:logFileId                                                                                       */

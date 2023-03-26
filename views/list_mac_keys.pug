@@ -18,12 +18,9 @@ block content
               | Payload
             th(id="IsMaster", style="background-color: #000")
               | SHE Cmd Extracted
+  script(type="text/javascript" src="/javascripts/list_mac_keys_onLoad.js")
   script(type="text/javascript")
+    |
     | var active_keys = #{activeKeys};
     | var mac_keys_tbl = #{macKeysTbl};
-    | function localOnLoad() 
-    | {
-    |   
-    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
-    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
-    | }
+    |

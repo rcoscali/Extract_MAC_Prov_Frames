@@ -41,10 +41,17 @@ app.use(
         res.locals.error = req.app.get('env') === 'development' ? err : {};
       
         // render the error page
-        console.log("Error caught and processed !");
+        console.log(new Error().stack);
         
         res.status(err.status || 500);
-        res.render('error');
+        res.render(
+            'error',
+            {
+                error_message: err.message,
+                error_status: err.status,
+                error_stack: err.stack
+            }
+        );
     }
 );
 

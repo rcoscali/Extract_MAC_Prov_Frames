@@ -1,13 +1,9 @@
 extends layout
 
 block content
-  h1= message
-  h2= error.status
-  pre #{error.stack}
-  script(type="text/javascript")
-    | var active_keys = #{activeKeys};
-    | function localOnLoad() 
-    | {
-    |   document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
-    |   document.getElementById('k_master_ecu').value = active_keys['kMasterEcu'];
-    | }
+  h1.
+    #{error_message}
+  h2. 
+    #{error_status}
+  pre. 
+    #{error_stack}
