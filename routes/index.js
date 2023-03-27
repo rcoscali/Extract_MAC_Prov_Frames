@@ -1813,7 +1813,7 @@ var keystoredb =
                         var page = (req.params['page'] !== undefined || req.params['page'] == 0 ? Number.parseInt(req.params['page']) : 1);
                         var renderParams;
 
-                        console.log("*** GET /list_secured_frames/:logFileId/:page (/= "+logFileid+" /= "+page+")");
+                        console.log("*** GET /list_secured_frames/:logFileId/:page (/= "+logFileId+" /= "+page+")");
                         keystoredb.get(
                             "SELECT MacEcu, MasterEcu FROM ActiveKeys",
                             (err, key) =>
