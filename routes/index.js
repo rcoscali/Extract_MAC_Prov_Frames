@@ -91,7 +91,7 @@ var keystoredb =
                 );
                 
                 /* ========================================================================================================================= */
-                /* GET home page. */
+                /* GET /favicon.ico                                                                                                          */
                 /* ========================================================================================================================= */
                 router.get(
                     '/favicon.ico',
@@ -102,47 +102,10 @@ var keystoredb =
                             {
                                 'root': path.join(process.env.MAC_PROV_ROOT, '/public/images'),
                                 'dotfiles': 'deny',
-                                //'acceptRanges': false,
                                 'headers' :
                                 {                                    
                                     'Content-Type': 'image/x-icon',
                                     'Content-Length': data.length,
-                                    'X-Timestamp': Date.now(),
-                                    'X-Sent': true
-                                },
-                                'immutable': true
-                            };
-
-                        res.sendFile(
-                            req.params.name,
-                            faviconOptions,
-                            (err) =>
-                            {
-                                if (err)
-                                {
-                                    next(err);
-                                    return;
-                                }
-                            }
-                        );
-                    }
-                );
-                
-                /* ========================================================================================================================= */
-                /* GET /activate_keys/:kMacEcu/:kMasterEcu                                                                                   */
-                /* ========================================================================================================================= */
-                router.get(
-                    '/favicon.ico',
-                    (req, res, next) =>
-                    {
-                        console.log("*** GET /favicon.ico");
-                        var faviconOptions =
-                            {
-                                'root': path.join(process.env.MAC_PROV_ROOT, '/public/images'),
-                                'dotfiles': 'deny',
-                                'headers' :
-                                {                                    
-                                    'Content-Type': 'image/x-icon',
                                     'X-Timestamp': Date.now(),
                                     'X-Sent': true
                                 },
@@ -163,7 +126,7 @@ var keystoredb =
                         );
                     }
                 );
-                
+                                
                 /*
                  * ========================================================================================================================= *
                  *                                                                                                                           *
@@ -566,15 +529,20 @@ var keystoredb =
                         // finding a prov frame start)
                         function processProvFrames_OnLine(line)
                         {
+                            // Pause emission of parsing events from stream
                             s.pause();
+                            // While searching for the start of a prov frame
                             if (!parsingFrame)
                             {
+                                // Find a prov frame by matching against a RegEx
                                 var fields;
                                 if ((fields = provFrameRE.exec(line)) != null)
                                 {
+                                    // Prov frame found
                                     result_log += "Found provisionning frame starting at line #" + lineNr + "\\n";
                                     var provRE = new RegExp('^ ? ?(?<Timestamp>[0-9.]*) ' + fields.groups.ProvRE + ' +[0-9] [0-9] [a-zA-Z0-9]  *(?<Data>[ 0-9a-zA-Z]+)   (?<Tail>(.*)(   .*))$');
                                     parsingFrame = true;
+                                    // Preparing provFrame object used for parsing nect lines and building final frame
                                     provFrame = {
                                         index: lineNr,
                                         regex: provRE,
@@ -584,13 +552,13 @@ var keystoredb =
                                     // Frame part index
                                     var fix = 0;
                                     provFrame['Parts'][fix] = new Object;
-                                    if (fields.groups.Data !== undefined)
-                                    {
+                                    //if (fields.groups.Data !== undefined)
+                                    //{
                                         payload = fields.groups.Data.replace(/ /g, '');
                                         provFrame['Parts'][fix]['Payload'] = payload;
                                         provFrame['Payload'] = payload;
-                                    }
-                                    console.log("Start of frame payload: " + payload);
+                                    //}
+                                    //console.log("Start of frame payload: " + payload);
                                     fix++;
                                 }
                                 lineNr++;
@@ -608,10 +576,11 @@ var keystoredb =
                                 do
                                 {
                                     var fields;
-                                    // If match
+                                    // If line match vs a continuing prov frame
                                     if ((fields = provFrame['regex'].exec(line)) != null)
                                     {
                                         result_log += "Adding payload for frame #" + lineNr + " from line #" + lineNr + ": ";
+                                        // Storing properties of the frame
                                         provFrame['Parts'][fix] = new Object;
                                         provFrame['Parts'][fix]['Timestamp'] = fields.groups.Timestamp;
                                         result_log += "Timestamp='" + provFrame['Parts'][fix]['Timestamp'] + "' ";
@@ -624,16 +593,18 @@ var keystoredb =
                                         result_log += "Payload='" + provFrame['Parts'][fix]['Payload'] + "' ";
                                         provFrame['Parts'][fix]['Tail'] = fields.groups.Tail;
                                         result_log += "Tail='" + provFrame['Parts'][fix]['Tail'] + "'\\n";
-                                        console.log("Adding payload: " + provFrame['Parts'][fix]['Payload']);
+                                        //console.log("Adding payload: " + provFrame['Parts'][fix]['Payload']);
 
-                                        payload += provFrame['Parts'][fix]['Payload'];
-                                        provFrame['Payload'] = payload;
-
+                                        // Check if this is the last frame of the provisionning frames
                                         if (provFrame['Parts'][fix]['Payload'].startsWith("010055"))
                                         {
+                                            // Frame cannot be longer than 64 bytes (by spec) or 128 chars
                                             if (payload !== undefined && payload.length > 128)
                                                 payload = payload.substring(0, 128);
-                                            console.log("End of frame found for the final payload: " + payload);
+                                            //console.log("End of frame found for the final payload: " + payload);
+
+                                            // Next we will not be searching for continuing prov frames
+                                            // This frame is complete, Next let's search another one
                                             parsingFrame = false;
                                             frameNr++;
                                             // A frame just completed... switch back on finding a frame start
@@ -651,6 +622,11 @@ var keystoredb =
                                             );
                                             break;
                                         }
+                                        else {
+                                            // Accumulate payload
+                                            payload += provFrame['Parts'][fix]['Payload'];
+                                            provFrame['Payload'] = payload;
+                                        }
                                         result_log += "Frame #" + lineNr + " payload = '" + provFrame['Payload'] + "'\\n";
                                     }
                                 }
@@ -665,19 +641,16 @@ var keystoredb =
                         // Now change 
                         function processProvFrames_OnEnd()
                         {
-                            console.log("*** processProvFrames_OnEnd");
                             // Update database by setting ProvFramesExtracted flag to true
-                            var updateStmt = "UPDATE LogFiles SET ProvFramesExtracted='1', LinesNb=? WHERE LogFiles.Name=?";
+                            var updateStmt = "UPDATE LogFiles SET ProvFramesExtracted='1', LinesNb=?  WHERE id=?";
                             keystoredb.run(
                                 updateStmt,
-                                [logFileName, lineNr],
+                                [lineNr, logFileID],
                                 (err) =>
                                 {
                                     if (err)
                                         throw new Error();
                                     
-                                    console.log('*END* Entire file was read...');
-                                    console.log("** result_log = \"" + result_log + "\"");
                                     renderParams['result_log'] = result_log;
                                     renderParams['status'] = "'Frames extracted from log file with id = " + renderParams['logFileID'] + "! Processing log is here after:'";
                                     response.render(
@@ -772,21 +745,21 @@ var keystoredb =
                                                         es.mapSync(
                                                             processProvFrames_OnLine
                                                         )
-                                                            .on(
-                                                                'error',
-                                                                // Cannot put the router in the closure, then put error handler here
-                                                                (err) =>
-                                                                {
-                                                                    // Prov Frame Processing error handler
-                                                                    console.trace('Error while reading file.', err);
-                                                                    next(err.status || 500);
-                                                                    return;
-                                                                }
-                                                            )
-                                                            .on(
-                                                                'end',
-                                                                processProvFrames_OnEnd
-                                                            )
+                                                        .on(
+                                                            'error',
+                                                            // Cannot put the router in the closure, then put error handler here
+                                                            (err) =>
+                                                            {
+                                                                // Prov Frame Processing error handler
+                                                                console.trace('Error while reading file.', err);
+                                                                next(err.status || 500);
+                                                                return;
+                                                            }
+                                                        )
+                                                        .on(
+                                                            'end',
+                                                            processProvFrames_OnEnd
+                                                        )
                                                     );
                                             }
                                         );
@@ -872,22 +845,22 @@ var keystoredb =
                                                                 es.mapSync(
                                                                     processProvFrames_OnLine
                                                                 )
-                                                                    .on(
-                                                                        'error',
-                                                                        // Cannot put the router in the closure, then put error handler here
-                                                                        (err) =>
-                                                                        {
-                                                                            // Prov Frame Processing error handler
-                                                                            console.trace('Error while reading file.', err);
-                                                                            next(err.status || 500);
-                                                                            return;
-                                                                        }
-                                                                    )
-                                                                    .on(
-                                                                        'end',
-                                                                        processProvFrames_OnEnd
-                                                                    )
-                                                                 );
+                                                                .on(
+                                                                    'error',
+                                                                    // Cannot put the router in the closure, then put error handler here
+                                                                    (err) =>
+                                                                    {
+                                                                        // Prov Frame Processing error handler
+                                                                        console.trace('Error while reading file.', err);
+                                                                        next(err.status || 500);
+                                                                        return;
+                                                                    }
+                                                                )
+                                                                .on(
+                                                                    'end',
+                                                                    processProvFrames_OnEnd
+                                                                )
+                                                            );
                                                     }
                                                 );
                                             }
@@ -924,9 +897,9 @@ var keystoredb =
 
                                 var logFileId = Number.parseInt(req.params['logFileId']);
                                 var stmt = "SELECT DISTINCT f.id, l.Name, f.Frame, f.SHECmdExtracted \
-                                                    FROM LogFiles l \
-                                                                    LEFT JOIN MACProvFrames f ON l.id = f.LogFileId \
-                                                    WHERE length(f.Frame) > 0 AND l.id = ?";
+                                            FROM LogFiles l \
+                                            LEFT JOIN MACProvFrames f ON l.id = f.LogFileId \
+                                            WHERE length(f.Frame) > 0 AND l.id = ?";
                                 keystoredb.all(
                                     stmt,
                                     [logFileId],
@@ -1086,7 +1059,7 @@ var keystoredb =
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
-                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE id = ?";
+                                var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE id = ? AND SecuredFramesExtracted = 0";
                                 keystoredb.get(
                                     stmt,
                                     [logFileId],
@@ -1097,155 +1070,182 @@ var keystoredb =
                                             next(err);
                                             return;
                                         }
-                                        // For the found log file
-                                        if (row.Content == undefined)
-                                        {
-                                            next("Couldn't get log file content from DB");
-                                            return;
-                                        }
+
                                         // Update LogFiles table for avoiding several extract
                                         var updateStmt = "UPDATE LogFiles SET SecuredFramesExtracted='1' WHERE LogFiles.id=?";
                                         keystoredb.run(
                                             updateStmt,
                                             [logFileId]
                                         );
-                                        var lines = row.Content.split(/\r?\n/);
-                                        oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+
+                                        oneline_result_log += "File '" + row.Name + "' !\\n";
                                         var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                         var frames = new Array;
                                         var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                                        for (var i = 0; i < lines.length; i++)
-                                        {
-                                            var fields;
-                                            if ((fields = frameRE.exec(lines[i])))
-                                            {
-                                                // Found a frame => parsing it
-                                                oneline_result_log += " - line #" + i + ": ";
-                                                // TimeStamp (ex.: 123.654352)
-                                                var tstamp = fields.groups.Timestamp;
-                                                // Frame ID (ex.: 6e3)
-                                                var fid = fields.groups.id;
-                                                // Frame Name
-                                                var name = fields.groups.name;
-                                                // Payload of the frame
-                                                var payload = fields.groups.payload;
-                                                // Height MSBytes of the last AES-cmac block (MAC authentication tag)
-                                                var tmac = fields.groups.tmac.trim().replace(/ /g, '');
-                                                // Log these to page log textarea
-                                                oneline_result_log += "   = tstamp = '" + tstamp + "'";
-                                                oneline_result_log += " id = '" + fid + "'";
-                                                oneline_result_log += " name = '" + name + "'";
-                                                oneline_result_log += " tmac = '" + tmac + "'";
-                                                // Processing payload for extracting FVs
-                                                //  - FVs from Sync frames is the full ARC (6 bytes)
-                                                //  - FVs from ReSync frames if a table of full Rx ARC for every ECU
-                                                //  - For SC_FD frames, no Full FV, only 2 bytes LSBytes
-                                                var resyncRE = /^FVReSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
-                                                var syncRE = /^FVSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
-                                                var scfdRE = /^(?<ecu>[A-Za-z0-9]+)_.*/;
-                                                var fv = "";
-                                                var pad = "";
-                                                var dlc = "";
-                                                var msb = "";
-                                                var lsb = "";
-                                                var ecuName = "";
-                                                var ecuFields;
-                                                // Sync frame
-                                                if ((ecuFields = syncRE.exec(name)) != null)
-                                                {
-                                                    // Extracting padding from payload
-                                                    var padRE = /(?<pad>00 ?){0,15}$/;
-                                                    if ((fields = padRE.exec(payload)) != null)
+                                        var lineNr = 0;
+                                        var filePath = path.join(DbLogPath, row.Name);
+                                        var s =
+                                            fs.createReadStream(filePath)
+                                            .pipe(
+                                                es.split()
+                                            )
+                                            .pipe(
+                                                es.mapSync(
+                                                    (line) =>
                                                     {
-                                                        pad = payload.substring(fields.index).trim().replace(/ /g, '');
-                                                        payload = payload.substring(0, fields.index).trim();
+                                                        // pause the readstream
+                                                        s.pause();
+                                                        
+                                                        var fields;
+                                                        if ((fields = frameRE.exec(line)))
+                                                        {
+                                                            // Found a frame => parsing it
+                                                            oneline_result_log += " - line #" + i + ": ";
+                                                            // TimeStamp (ex.: 123.654352)
+                                                            var tstamp = fields.groups.Timestamp;
+                                                            // Frame ID (ex.: 6e3)
+                                                            var fid = fields.groups.id;
+                                                            // Frame Name
+                                                            var name = fields.groups.name;
+                                                            // Payload of the frame
+                                                            var payload = fields.groups.payload;
+                                                            // Height MSBytes of the last AES-cmac block (MAC authentication tag)
+                                                            var tmac = fields.groups.tmac.trim().replace(/ /g, '');
+                                                            // Log these to page log textarea
+                                                            oneline_result_log += "   = tstamp = '" + tstamp + "'";
+                                                            oneline_result_log += " id = '" + fid + "'";
+                                                            oneline_result_log += " name = '" + name + "'";
+                                                            oneline_result_log += " tmac = '" + tmac + "'";
+                                                            // Processing payload for extracting FVs
+                                                            //  - FVs from Sync frames is the full ARC (6 bytes)
+                                                            //  - FVs from ReSync frames if a table of full Rx ARC for every ECU
+                                                            //  - For SC_FD frames, no Full FV, only 2 bytes LSBytes
+                                                            var resyncRE = /^FVReSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                            var syncRE = /^FVSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                            var scfdRE = /^(?<ecu>[A-Za-z0-9]+)_.*/;
+                                                            var fv = "";
+                                                            var pad = "";
+                                                            var dlc = "";
+                                                            var msb = "";
+                                                            var lsb = "";
+                                                            var ecuName = "";
+                                                            var ecuFields;
+                                                            // Sync frame
+                                                            if ((ecuFields = syncRE.exec(name)) != null)
+                                                            {
+                                                                // Extracting padding from payload
+                                                                var padRE = /(?<pad>00 ?){0,15}$/;
+                                                                if ((fields = padRE.exec(payload)) != null)
+                                                                {
+                                                                    pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                                    payload = payload.substring(0, fields.index).trim();
+                                                                }
+                                                                var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
+                                                                ecuName = ecuFields.groups.ecu;
+                                                                if ((fields = fvRE.exec(payload)) != null)
+                                                                {
+                                                                    dlc = fields.groups.dlc;
+                                                                    fv = fields.groups.fv.replace(/ /g, '');
+                                                                    msb = fv.substring(0, 8).replace(/ /g, '');
+                                                                    lsb = fv.substring(8).replace(/ /g, '');
+                                                                    payload = '';
+                                                                }
+                                                                else
+                                                                    throw 'RegEx error for getting FV from Sync frame !';
+                                                            }
+                                                            // ReSync frame
+                                                            else if ((ecuFields = resyncRE.exec(name)) != null)
+                                                            {
+                                                                // Extracting padding from payload
+                                                                var padRE = /(?<pad>00 ?){0,15}$/;
+                                                                if ((fields = padRE.exec(payload)) != null)
+                                                                {
+                                                                    pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                                    payload = payload.substring(0, fields.index).trim();
+                                                                }
+                                                                ecuName = ecuFields.groups.ecu;
+                                                                var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
+                                                                var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
+                                                                if ((fields = fvRE.exec(payload)) != null)
+                                                                {
+                                                                    dlc = fields.groups.dlc;
+                                                                    fv = fields.groups.fvstbl.replace(/ /g, '');
+                                                                    payload = '';
+                                                                }
+                                                                else
+                                                                    throw 'RegEx error for getting FVs from ReSync frame !';
+                                                            }
+                                                            // SC_FD frame
+                                                            else if ((ecuFields = scfdRE.exec(name)) != null)
+                                                            {
+                                                                // Extracting lsb from payload
+                                                                var lsbRE = /(?<lsb>([a-fA-F0-9]{2}) ?){2}$/;
+                                                                if ((fields = lsbRE.exec(payload)) != null)
+                                                                {
+                                                                    lsb = payload.substring(fields.index).replace(/ /g, '').trim();
+                                                                    payload = payload.substring(0, fields.index).trim();
+                                                                }
+                                                                // Extracting padding from payload
+                                                                var padRE = /(?<pad>00 ?){0,15}$/;
+                                                                if ((fields = padRE.exec(payload)) != null)
+                                                                {
+                                                                    pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                                    payload = payload.substring(0, fields.index).trim();
+                                                                }
+                                                                ecuName = ecuFields.groups.ecu;
+                                                                var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
+                                                                if ((fields = scfdRE.exec(payload)) != null)
+                                                                {
+                                                                    dlc = fields.groups.dlc;
+                                                                    payload = fields.groups.payload.replace(/ /g, '');
+                                                                }
+                                                                else
+                                                                    throw 'RegEx error for getting payload from SC_FD frame !';
+                                                            }
+                                                            oneline_result_log += " dlc = '" + dlc + "'";
+                                                            oneline_result_log += " payload = '" + payload + "'";
+                                                            oneline_result_log += " fv = '" + fv + "'";
+                                                            oneline_result_log += " lsb = '" + lsb + "'";
+                                                            oneline_result_log += " msb = '" + msb + "'";
+                                                            oneline_result_log += " pad = '" + pad + "'";
+                                                            oneline_result_log += " ECUname = '" + ecuName + "'";
+                                                            oneline_result_log += "\\n";
+                                                            result_log += oneline_result_log,
+                                                            oneline_result_log = "";                                                
+                                                            keystoredb.run(
+                                                                stmt,
+                                                                [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
+                                                            );
+                                                        }
+
+                                                        // resume the readstream, possibly from a callback
+                                                        s.resume();
                                                     }
-                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
-                                                    ecuName = ecuFields.groups.ecu;
-                                                    if ((fields = fvRE.exec(payload)) != null)
+                                                ).on(
+                                                    'error',
+                                                    (err) =>
                                                     {
-                                                        dlc = fields.groups.dlc;
-                                                        fv = fields.groups.fv.replace(/ /g, '');
-                                                        msb = fv.substring(0, 8).replace(/ /g, '');
-                                                        lsb = fv.substring(8).replace(/ /g, '');
-                                                        payload = '';
+                                                        console.log("Error while processing '" + filePath + "' !");
+                                                        next(err.status || 500);
+                                                        return;
                                                     }
-                                                    else
-                                                        throw 'RegEx error for getting FV from Sync frame !';
-                                                }
-                                                // ReSync frame
-                                                else if ((ecuFields = resyncRE.exec(name)) != null)
-                                                {
-                                                    // Extracting padding from payload
-                                                    var padRE = /(?<pad>00 ?){0,15}$/;
-                                                    if ((fields = padRE.exec(payload)) != null)
+                                                ).on(
+                                                    'end',
+                                                    () =>
                                                     {
-                                                        pad = payload.substring(fields.index).trim().replace(/ /g, '');
-                                                        payload = payload.substring(0, fields.index).trim();
+                                                        console.log("End of initial processing for file '"+ newTargetFilePath +"'");
+                                                        
+                                                        renderParams['result_log'] = result_log;
+                                                        renderParams['status'] =
+                                                            " Secured frames extracted from log file with id = " + logFileId +
+                                                            "! Processing log is here after:";
+                                                        res.render(
+                                                            'extract_secured_mac_frames',
+                                                            renderParams
+                                                        );
                                                     }
-                                                    ecuName = ecuFields.groups.ecu;
-                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
-                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
-                                                    if ((fields = fvRE.exec(payload)) != null)
-                                                    {
-                                                        dlc = fields.groups.dlc;
-                                                        fv = fields.groups.fvstbl.replace(/ /g, '');
-                                                        payload = '';
-                                                    }
-                                                    else
-                                                        throw 'RegEx error for getting FVs from ReSync frame !';
-                                                }
-                                                // SC_FD frame
-                                                else if ((ecuFields = scfdRE.exec(name)) != null)
-                                                {
-                                                    // Extracting lsb from payload
-                                                    var lsbRE = /(?<lsb>([a-fA-F0-9]{2}) ?){2}$/;
-                                                    if ((fields = lsbRE.exec(payload)) != null)
-                                                    {
-                                                        lsb = payload.substring(fields.index).replace(/ /g, '').trim();
-                                                        payload = payload.substring(0, fields.index).trim();
-                                                    }
-                                                    // Extracting padding from payload
-                                                    var padRE = /(?<pad>00 ?){0,15}$/;
-                                                    if ((fields = padRE.exec(payload)) != null)
-                                                    {
-                                                        pad = payload.substring(fields.index).trim().replace(/ /g, '');
-                                                        payload = payload.substring(0, fields.index).trim();
-                                                    }
-                                                    ecuName = ecuFields.groups.ecu;
-                                                    var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
-                                                    if ((fields = scfdRE.exec(payload)) != null)
-                                                    {
-                                                        dlc = fields.groups.dlc;
-                                                        payload = fields.groups.payload.replace(/ /g, '');
-                                                    }
-                                                    else
-                                                        throw 'RegEx error for getting payload from SC_FD frame !';
-                                                }
-                                                oneline_result_log += " dlc = '" + dlc + "'";
-                                                oneline_result_log += " payload = '" + payload + "'";
-                                                oneline_result_log += " fv = '" + fv + "'";
-                                                oneline_result_log += " lsb = '" + lsb + "'";
-                                                oneline_result_log += " msb = '" + msb + "'";
-                                                oneline_result_log += " pad = '" + pad + "'";
-                                                oneline_result_log += " ECUname = '" + ecuName + "'";
-                                                oneline_result_log += "\\n";
-                                                result_log += oneline_result_log,
-                                                oneline_result_log = "";                                                
-                                                keystoredb.run(
-                                                    stmt,
-                                                    [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
-                                                );
-                                            }
-                                        }
-                                        renderParams['result_log'] = result_log;
-                                        renderParams['status'] =
-                                            " Secured frames extracted from log file with id = " + logFileId +
-                                            "! Processing log is here after:";
-                                        res.render(
-                                            'extract_mac_frames',
-                                            renderParams
-                                        );
+                                                )
+                                            )
                                     }
                                 );
                             }
@@ -1286,7 +1286,7 @@ var keystoredb =
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
-                                var stmt = "SELECT id, Name, UUID, Content FROM LogFiles WHERE SecuredFramesExtracted = 0";
+                                var stmt = "SELECT id, Name, UUID FROM LogFiles WHERE SecuredFramesExtracted = 0";
                                 keystoredb.all(
                                     stmt,
                                     [],
@@ -1301,162 +1301,191 @@ var keystoredb =
                                         rows.forEach(
                                             (row, rowix) => 
                                             {
-                                                // For the found log file
-                                                if (row.Content == undefined)
-                                                {
-                                                    next("Couldn't get log file content from DB");
-                                                    return;
-                                                }
                                                 // Update LogFiles table for avoiding several extract
                                                 var updateStmt = "UPDATE LogFiles SET SecuredFramesExtracted='1' WHERE LogFiles.id=?";
                                                 keystoredb.run(
                                                     updateStmt,
                                                     [row.id]
                                                 );
-                                                var lines = row.Content.split(/\r?\n/);
-                                                oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
+
+                                                oneline_result_log += "File '" + row.Name + "' !\\n";
                                                 var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                                 var frames = new Array;
                                                 var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                                                for (var i = 0; i < lines.length; i++)
-                                                {
-                                                    var fields;
-                                                    if ((fields = frameRE.exec(lines[i])))
-                                                    {
-                                                        // Found a frame => parsing it
-                                                        oneline_result_log += " - line #" + i + ": ";
-                                                        // TimeStamp (ex.: 123.654352)
-                                                        var tstamp = fields.groups.Timestamp;
-                                                        // Frame ID (ex.: 6e3)
-                                                        var fid = fields.groups.id;
-                                                        // Frame Name
-                                                        var name = fields.groups.name;
-                                                        // Payload of the frame
-                                                        var payload = fields.groups.payload;
-                                                        // Height MSBytes of the last AES-cmac block (MAC authentication tag)
-                                                        var tmac = fields.groups.tmac.trim().replace(/ /g, '');
-                                                        // Log these to page log textarea
-                                                        oneline_result_log += "   = tstamp = '" + tstamp + "'";
-                                                        oneline_result_log += " id = '" + fid + "'";
-                                                        oneline_result_log += " name = '" + name + "'";
-                                                        oneline_result_log += " tmac = '" + tmac + "'";
-                                                        // Processing payload for extracting FVs
-                                                        //  - FVs from Sync frames is the full ARC (6 bytes)
-                                                        //  - FVs from ReSync frames if a table of full Rx ARC for every ECU
-                                                        //  - For SC_FD frames, no Full FV, only 2 bytes LSBytes
-                                                        var resyncRE = /^FVReSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
-                                                        var syncRE = /^FVSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
-                                                        var scfdRE = /^(?<ecu>[A-Za-z0-9]+)_.*/;
-                                                        var fv = "";
-                                                        var pad = "";
-                                                        var dlc = "";
-                                                        var msb = "";
-                                                        var lsb = "";
-                                                        var ecuName = "";
-                                                        var ecuFields;
-                                                        // Sync frame
-                                                        if ((ecuFields = syncRE.exec(name)) != null)
-                                                        {
-                                                            // Extracting padding from payload
-                                                            var padRE = /(?<pad>00 ?){0,15}$/;
-                                                            if ((fields = padRE.exec(payload)) != null)
+
+                                                var lineNr = 0;
+                                                var filePath = path.join(DbLogPath, row.Name);
+
+                                                var s =
+                                                    fs.createReadStream(filePath)
+                                                    .pipe(
+                                                        es.split()
+                                                    )
+                                                    .pipe(
+                                                        es.mapSync(
+                                                            (line) =>
                                                             {
-                                                                pad = payload.substring(fields.index).trim().replace(/ /g, '');
-                                                                payload = payload.substring(0, fields.index).trim();
+                                                                // pause the readstream
+                                                                s.pause();
+                                                                
+                                                                var fields;
+                                                                if ((fields = frameRE.exec(lines[i])))
+                                                                {
+                                                                    // Found a frame => parsing it
+                                                                    oneline_result_log += " - line #" + i + ": ";
+                                                                    // TimeStamp (ex.: 123.654352)
+                                                                    var tstamp = fields.groups.Timestamp;
+                                                                    // Frame ID (ex.: 6e3)
+                                                                    var fid = fields.groups.id;
+                                                                    // Frame Name
+                                                                    var name = fields.groups.name;
+                                                                    // Payload of the frame
+                                                                    var payload = fields.groups.payload;
+                                                                    // Height MSBytes of the last AES-cmac block (MAC authentication tag)
+                                                                    var tmac = fields.groups.tmac.trim().replace(/ /g, '');
+                                                                    // Log these to page log textarea
+                                                                    oneline_result_log += "   = tstamp = '" + tstamp + "'";
+                                                                    oneline_result_log += " id = '" + fid + "'";
+                                                                    oneline_result_log += " name = '" + name + "'";
+                                                                    oneline_result_log += " tmac = '" + tmac + "'";
+                                                                    // Processing payload for extracting FVs
+                                                                    //  - FVs from Sync frames is the full ARC (6 bytes)
+                                                                    //  - FVs from ReSync frames if a table of full Rx ARC for every ECU
+                                                                    //  - For SC_FD frames, no Full FV, only 2 bytes LSBytes
+                                                                    var resyncRE = /^FVReSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                                    var syncRE = /^FVSyncFrame_(?<ecu>[A-Za-z0-9]+)_.*$/;
+                                                                    var scfdRE = /^(?<ecu>[A-Za-z0-9]+)_.*/;
+                                                                    var fv = "";
+                                                                    var pad = "";
+                                                                    var dlc = "";
+                                                                    var msb = "";
+                                                                    var lsb = "";
+                                                                    var ecuName = "";
+                                                                    var ecuFields;
+                                                                    // Sync frame
+                                                                    if ((ecuFields = syncRE.exec(name)) != null)
+                                                                    {
+                                                                        // Extracting padding from payload
+                                                                        var padRE = /(?<pad>00 ?){0,15}$/;
+                                                                        if ((fields = padRE.exec(payload)) != null)
+                                                                        {
+                                                                            pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                                            payload = payload.substring(0, fields.index).trim();
+                                                                        }
+                                                                        ecuName = ecuFields.groups.ecu;
+                                                                        var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
+                                                                        if ((fields = fvRE.exec(payload)) != null)
+                                                                        {
+                                                                            dlc = fields.groups.dlc;
+                                                                            fv = fields.groups.fv.replace(/ /g, '');
+                                                                            msb = fv.substring(0, 8).replace(/ /g, '');
+                                                                            lsb = fv.substring(8).replace(/ /g, '');
+                                                                            payload = '';
+                                                                        }
+                                                                        else
+                                                                            throw 'RegEx error for getting FV from Sync frame !';
+                                                                    }
+                                                                    // ReSync frame
+                                                                    else if ((ecuFields = resyncRE.exec(name)) != null)
+                                                                    {
+                                                                        // Extracting padding from payload
+                                                                        var padRE = /(?<pad>00 ?){0,15}$/;
+                                                                        if ((fields = padRE.exec(payload)) != null)
+                                                                        {
+                                                                            pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                                            payload = payload.substring(0, fields.index).trim();
+                                                                        }
+                                                                        ecuName = ecuFields.groups.ecu;
+                                                                        var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
+                                                                        if ((fields = fvRE.exec(payload)) != null)
+                                                                        {
+                                                                            dlc = fields.groups.dlc;
+                                                                            fv = fields.groups.fvstbl.replace(/ /g, '');
+                                                                            payload = '';
+                                                                        }
+                                                                        else
+                                                                            throw 'RegEx error for getting FVs from ReSync frame !';
+                                                                    }
+                                                                    // SC_FD frame
+                                                                    else if ((ecuFields = scfdRE.exec(name)) != null)
+                                                                    {
+                                                                        // Extracting lsb from payload
+                                                                        var lsbRE = /(?<lsb>([a-fA-F0-9]{2}) ?){2}$/;
+                                                                        if ((fields = lsbRE.exec(payload)) != null)
+                                                                        {
+                                                                            lsb = payload.substring(fields.index).replace(/ /g, '').trim();
+                                                                            payload = payload.substring(0, fields.index).trim();
+                                                                        }
+                                                                        // Extracting padding from payload
+                                                                        var padRE = /(?<pad>00 ?){0,15}$/;
+                                                                        if ((fields = padRE.exec(payload)) != null)
+                                                                        {
+                                                                            pad = payload.substring(fields.index).trim().replace(/ /g, '');
+                                                                            payload = payload.substring(0, fields.index).trim();
+                                                                        }
+                                                                        ecuName = ecuFields.groups.ecu;
+                                                                        var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
+                                                                        if ((fields = scfdRE.exec(payload)) != null)
+                                                                        {
+                                                                            dlc = fields.groups.dlc;
+                                                                            payload = fields.groups.payload.replace(/ /g, '');
+                                                                        }
+                                                                        else
+                                                                            throw 'RegEx error for getting payload from SC_FD frame !';
+                                                                    }
+                                                                    oneline_result_log += " payload = '" + payload + "'";
+                                                                    oneline_result_log += " fv = '" + fv + "'";
+                                                                    oneline_result_log += " lsb = '" + lsb + "'";
+                                                                    oneline_result_log += " msb = '" + msb + "'";
+                                                                    oneline_result_log += " pad = '" + pad + "'";
+                                                                    oneline_result_log += " ECUname = '" + ecuName + "'";
+                                                                    oneline_result_log += "\\n";
+                                                                    result_log += oneline_result_log;
+                                                                    oneline_result_log = "";
+                                                                    keystoredb.run(
+                                                                        stmt,
+                                                                        [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
+                                                                    );
+                                                                    
+                                                                    // resume the readstream, possibly from a callback
+                                                                    s.resume();
+                                                                }
                                                             }
-                                                            ecuName = ecuFields.groups.ecu;
-                                                            var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fv>([0-9a-fA-F]{2} ?){6})$/;
-                                                            if ((fields = fvRE.exec(payload)) != null)
+                                                        ).on(
+                                                            'error',
+                                                            (err) =>
                                                             {
-                                                                dlc = fields.groups.dlc;
-                                                                fv = fields.groups.fv.replace(/ /g, '');
-                                                                msb = fv.substring(0, 8).replace(/ /g, '');
-                                                                lsb = fv.substring(8).replace(/ /g, '');
-                                                                payload = '';
+                                                                console.log("Error while processing '" + newTargetFilePath + "' !");
+                                                                next(err.status || 500);
+                                                                return;
                                                             }
-                                                            else
-                                                                throw 'RegEx error for getting FV from Sync frame !';
-                                                        }
-                                                        // ReSync frame
-                                                        else if ((ecuFields = resyncRE.exec(name)) != null)
-                                                        {
-                                                            // Extracting padding from payload
-                                                            var padRE = /(?<pad>00 ?){0,15}$/;
-                                                            if ((fields = padRE.exec(payload)) != null)
+                                                        ).on(
+                                                            'end',
+                                                            () =>
                                                             {
-                                                                pad = payload.substring(fields.index).trim().replace(/ /g, '');
-                                                                payload = payload.substring(0, fields.index).trim();
+                                                                console.log("End of initial processing for file '"+ newTargetFilePath +"'");
+                                                                
+                                                                renderParams['result_log'] = result_log;
+                                                                renderParams['status'] =
+                                                                    " Secured frames extracted from log file with id = " + logFileId +
+                                                                    "! Processing log is here after:";
+                                                                res.render(
+                                                                    'extract_mac_frames',
+                                                                    renderParams
+                                                                );
+                                                                
                                                             }
-                                                            ecuName = ecuFields.groups.ecu;
-                                                            var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
-                                                            if ((fields = fvRE.exec(payload)) != null)
-                                                            {
-                                                                dlc = fields.groups.dlc;
-                                                                fv = fields.groups.fvstbl.replace(/ /g, '');
-                                                                payload = '';
-                                                            }
-                                                            else
-                                                                throw 'RegEx error for getting FVs from ReSync frame !';
-                                                        }
-                                                        // SC_FD frame
-                                                        else if ((ecuFields = scfdRE.exec(name)) != null)
-                                                        {
-                                                            // Extracting lsb from payload
-                                                            var lsbRE = /(?<lsb>([a-fA-F0-9]{2}) ?){2}$/;
-                                                            if ((fields = lsbRE.exec(payload)) != null)
-                                                            {
-                                                                lsb = payload.substring(fields.index).replace(/ /g, '').trim();
-                                                                payload = payload.substring(0, fields.index).trim();
-                                                            }
-                                                            // Extracting padding from payload
-                                                            var padRE = /(?<pad>00 ?){0,15}$/;
-                                                            if ((fields = padRE.exec(payload)) != null)
-                                                            {
-                                                                pad = payload.substring(fields.index).trim().replace(/ /g, '');
-                                                                payload = payload.substring(0, fields.index).trim();
-                                                            }
-                                                            ecuName = ecuFields.groups.ecu;
-                                                            var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
-                                                            if ((fields = scfdRE.exec(payload)) != null)
-                                                            {
-                                                                dlc = fields.groups.dlc;
-                                                                payload = fields.groups.payload.replace(/ /g, '');
-                                                            }
-                                                            else
-                                                                throw 'RegEx error for getting payload from SC_FD frame !';
-                                                        }
-                                                        oneline_result_log += " payload = '" + payload + "'";
-                                                        oneline_result_log += " fv = '" + fv + "'";
-                                                        oneline_result_log += " lsb = '" + lsb + "'";
-                                                        oneline_result_log += " msb = '" + msb + "'";
-                                                        oneline_result_log += " pad = '" + pad + "'";
-                                                        oneline_result_log += " ECUname = '" + ecuName + "'";
-                                                        oneline_result_log += "\\n";
-                                                        result_log += oneline_result_log;
-                                                        oneline_result_log = "";
-                                                        keystoredb.run(
-                                                            stmt,
-                                                            [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
-                                                        );
-                                                    }
-                                                }
-                                                renderParams['result_log'] = result_log;
-                                                renderParams['status'] =
-                                                    " Secured frames extracted from log file with id = " + logFileId +
-                                                    "! Processing log is here after:";
-                                                res.render(
-                                                    'extract_mac_frames',
-                                                    renderParams
-                                                );
-                                                
+                                                        )
+                                                    )
                                             }
-                                        );                                        
+                                        );
                                     }
                                 );
                             }
                         );
                     }
                 );
+                
                 /* ========================================================================================================================= */
                 /* GET /compute_secured_frames_mac_by_id                                                                                     */
                 /* ========================================================================================================================= */
@@ -2060,7 +2089,7 @@ var keystoredb =
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 content: '1 frame processed !',
                                                 sheArgsTbl: contentHtml,
-                                                accordionTab: 2
+                                                accordionTab: 3
                                             }
                                         );
                                     }
@@ -2151,7 +2180,7 @@ var keystoredb =
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 content: rows.length + ' frames processed',
                                                 sheArgsTbl: contentHtml,
-                                                accordionTab: 2
+                                                accordionTab: 3
                                             }
                                         );
                                     }
@@ -2209,7 +2238,7 @@ var keystoredb =
                                                 help: 'Table listing all SHE commands args stored in DB',
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 sheArgsTbl: '[' + contentHtml + ']',
-                                                accordionTab: 2
+                                                accordionTab: 3
                                             }
                                         );
                                     }

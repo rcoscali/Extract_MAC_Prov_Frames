@@ -20,14 +20,14 @@ var onProvFrameExtract =
 var onListSecuredFrame =
     (i) =>
     {
-        document.location.href = '/list_mac_prov_frame/' + log_files_tbl[i]['id'];
+        document.location.href = '/list_secured_frames/' + log_files_tbl[i]['id'];
     }
 
 // Event handler for checkbox allowing to list provisionning frames
 var onListProvFrame =
     (i) =>
     {
-        document.location.href = '/list_secured_frames/' + log_files_tbl[i]['id'];
+        document.location.href = '/list_mac_prov_frame/' + log_files_tbl[i]['id'];
     }
 
 // Event handler for the page onload event (set from the body tag)
@@ -60,7 +60,19 @@ var localOnLoad =
             newCell.innerHTML = log_files_tbl[i]['Version'];
             // Add a column for the Size of the log file
             newCell = newRow.insertCell(4);
-            newCell.innerHTML = log_files_tbl[i]['Size'];
+            if (log_files_tbl[i]['Size'] !== undefined)
+            {
+                if (log_files_tbl[i]['Size'] > (1024*1024*1024))
+                    newCell.innerHTML = (log_files_tbl[i]['Size'] / (1024*1024*1024)).toFixed(2) + " Go";
+                else if (log_files_tbl[i]['Size'] > (1024*1024))
+                    newCell.innerHTML = (log_files_tbl[i]['Size'] / (1024*1024)).toFixed(2) + " Mo";
+                else if (log_files_tbl[i]['Size'] > 1024)
+                    newCell.innerHTML = (log_files_tbl[i]['Size'] / 1024).toFixed(2) + " Ko";
+                else if (log_files_tbl[i]['Size'] < 1024)
+                    newCell.innerHTML = log_files_tbl[i]['Size'];
+            }
+            else
+                    newCell.innerHTML = '?';
             // Add a column for the LinesNb of the log file
             newCell = newRow.insertCell(5);
             newCell.innerHTML = log_files_tbl[i]['LinesNb'];

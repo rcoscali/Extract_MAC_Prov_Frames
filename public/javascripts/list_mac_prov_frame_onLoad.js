@@ -21,6 +21,9 @@ var localOnLoad =
             newCell.innerHTML = link.outerHTML;
             // Add a column for the ProvFramesExtracted of the frame file
             newCell = newRow.insertCell(2);
+            var align_attr = document.createAttribute("align");
+            align_attr.value = "center";
+            newCell.setAttributeNode(align_attr);
             newCell.innerHTML = '<input type="checkbox" onclick="this.checked=!this.checked;" readonly'+(mac_prov_frame_tbl[i]['sheCmdExtracted'] ? ' checked' : '')+'>&nbsp;</input>';
         }
         document.getElementById('k_mac_ecu').value = active_keys['kMacEcu'];
