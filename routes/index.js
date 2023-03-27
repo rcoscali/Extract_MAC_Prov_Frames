@@ -841,9 +841,9 @@ var keystoredb =
 
                                 var logFileId = Number.parseInt(req.params['logFileId']);
                                 var stmt = "SELECT DISTINCT f.id, l.Name, f.Frame, f.SHECmdExtracted \
-                                                    FROM LogFiles l \
-                                                                    LEFT JOIN MACProvFrames f ON l.id = f.LogFileId \
-                                                    WHERE length(f.Frame) > 0 AND l.id = ?";
+                                            FROM LogFiles l \
+                                            LEFT JOIN MACProvFrames f ON l.id = f.LogFileId \
+                                            WHERE length(f.Frame) > 0 AND l.id = ?";
                                 keystoredb.all(
                                     stmt,
                                     [logFileId],
@@ -1070,7 +1070,7 @@ var keystoredb =
                                                 // Sync frame
                                                 if ((ecuFields = syncRE.exec(name)) != null)
                                                 {
-                                                    // Extracting padding from payload
+                                                    // Extracting padding from payload (padding for Sync frames is 2 bytes)
                                                     var padRE = /(?<pad>00 ?){2}$/;
                                                     if ((fields = padRE.exec(payload)) != null)
                                                     {
@@ -1093,7 +1093,7 @@ var keystoredb =
                                                 // ReSync frame
                                                 else if ((ecuFields = resyncRE.exec(name)) != null)
                                                 {
-                                                    // Extracting padding from payload
+                                                    // Extracting padding from payload (padding for Sync frames is 4 bytes)
                                                     var padRE = /(?<pad>00 ?){4}$/;
                                                     if ((fields = padRE.exec(payload)) != null)
                                                     {
@@ -1127,6 +1127,19 @@ var keystoredb =
                                                     {
                                                         pad = payload.substring(fields.index).trim().replace(/ /g, '');
                                                         payload = payload.substring(0, fields.index).trim();
+                                                        var payload_len = (payload.length/2)-1; // Payload len is this string length/2 (1 byte 2 chars) -1 (for dlc)
+                                                        var pad_len = pad.length/2;
+                                                        if ((payload_len+10)/16 != Math.floor((payload_len+10)/16))
+                                                        {
+                                                            var wanted_payload_len = 0;
+                                                            do
+                                                            {
+                                                                wanted_payload_len++;
+                                                                payload+=' 00';
+                                                            }
+                                                            while((wanted_payload_len+payload_len+10)/16 != Math.floor((payload_len+10)/16));
+                                                            // Add wanted_payload_len 00 to payload and remove to pad                                                            
+                                                        }
                                                     }
                                                     ecuName = ecuFields.groups.ecu;
                                                     var scfdRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<payload>([0-9a-fA-F]{2} ?)+)$/;
