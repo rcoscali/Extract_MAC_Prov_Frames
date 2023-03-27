@@ -1030,7 +1030,7 @@ var keystoredb =
                                         oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
                                         var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                         var frames = new Array;
-                                        var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                        var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad, LogFileId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                                         for (var i = 0; i < lines.length; i++)
                                         {
                                             var fields;
@@ -1163,7 +1163,7 @@ var keystoredb =
                                                 oneline_result_log = "";                                                
                                                 keystoredb.run(
                                                     stmt,
-                                                    [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
+                                                    [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad, logFileId]
                                                 );
                                             }
                                         }
@@ -1246,7 +1246,7 @@ var keystoredb =
                                                 oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
                                                 var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                                 var frames = new Array;
-                                                var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                                var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad, LogFileId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                                                 for (var i = 0; i < lines.length; i++)
                                                 {
                                                     var fields;
@@ -1365,7 +1365,7 @@ var keystoredb =
                                                         oneline_result_log = "";
                                                         keystoredb.run(
                                                             stmt,
-                                                            [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad]
+                                                            [name, tstamp, fid, ecuName, dlc, tmac, fv, payload, msb, lsb, pad, row.id]
                                                         );
                                                     }
                                                 }
@@ -1845,6 +1845,11 @@ var keystoredb =
                                     [logFileId],
                                     (err, countRow) =>
                                     {
+                                        if (countRow === undefined)
+                                        {
+                                            next('No SecuredFrame rows returned !');
+                                            return;
+                                        }
                                         var number_of_pages = Math.floor(countRow.row_count / 20);
                                         if (number_of_pages < (countRow.row_count / 20))
                                             number_of_pages++;
