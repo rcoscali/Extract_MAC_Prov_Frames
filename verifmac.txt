@@ -42,4 +42,5 @@ bd c9 00 00 99 95 50 8e 28 59 98 46
 MSB + LSB trame => Full FV
 
 calc MAC: 0+id + payload trame + Full FV
-          2B                      6B
+          2B                      8B
+           (int(payload/16)+1)*16 -8
