@@ -1071,7 +1071,7 @@ var keystoredb =
                                                 if ((ecuFields = syncRE.exec(name)) != null)
                                                 {
                                                     // Extracting padding from payload
-                                                    var padRE = /(?<pad>00 ?){0,15}$/;
+                                                    var padRE = /(?<pad>00 ?){2}$/;
                                                     if ((fields = padRE.exec(payload)) != null)
                                                     {
                                                         pad = payload.substring(fields.index).trim().replace(/ /g, '');
@@ -1094,7 +1094,7 @@ var keystoredb =
                                                 else if ((ecuFields = resyncRE.exec(name)) != null)
                                                 {
                                                     // Extracting padding from payload
-                                                    var padRE = /(?<pad>00 ?){0,15}$/;
+                                                    var padRE = /(?<pad>00 ?){4}$/;
                                                     if ((fields = padRE.exec(payload)) != null)
                                                     {
                                                         pad = payload.substring(fields.index).trim().replace(/ /g, '');
@@ -1102,7 +1102,6 @@ var keystoredb =
                                                     }
                                                     ecuName = ecuFields.groups.ecu;
                                                     var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(([0-9a-fA-F]{2} ?){6}){6})$/;
-                                                    var fvRE = /^(?<dlc>[0-9a-fA-F]{2}) (?<fvstbl>(((?<fv>[0-9a-fA-F]{2}) ?){6}){6})$/;
                                                     if ((fields = fvRE.exec(payload)) != null)
                                                     {
                                                         dlc = fields.groups.dlc;
