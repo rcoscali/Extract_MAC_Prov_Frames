@@ -1028,13 +1028,13 @@ var keystoredb =
                                         );
                                         var lines = row.Content.split(/\r?\n/);
                                         oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                        var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
+                                        var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>([_A-Za-z0-9]+|FVSyncFrame_[A-Za-z0-9_]+|FVReSyncFrame_[A-Za-z0-9_]+)) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                         var frames = new Array;
                                         var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad, LogFileId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                                         for (var i = 0; i < lines.length; i++)
                                         {
                                             var fields;
-                                            if ((fields = frameRE.exec(lines[i])))
+                                            if ((fields = frameRE.exec(lines[i])) != null)
                                             {
                                                 // Found a frame => parsing it
                                                 oneline_result_log += " - line #" + i + ": ";
@@ -1129,15 +1129,19 @@ var keystoredb =
                                                         payload = payload.substring(0, fields.index).trim();
                                                         var payload_len = (payload.length/2)-1; // Payload len is this string length/2 (1 byte 2 chars) -1 (for dlc)
                                                         var pad_len = pad.length/2;
+                                                        console.log("(payload_len+10)/16 = " + ((payload_len+10)/16));
+                                                        console.log("Math.floor((payload_len+10)/16) = " + Math.floor(((payload_len+10)/16)));
                                                         if ((payload_len+10)/16 != Math.floor((payload_len+10)/16))
                                                         {
                                                             var wanted_payload_len = 0;
                                                             do
                                                             {
                                                                 wanted_payload_len++;
-                                                                payload+=' 00';
+                                                                //payload+=' 00';
+                                                                console.log("(wanted_payload_len+payload_len+10)/16 = " + ((wanted_payload_len+payload_len+10)/16));
+                                                                console.log("Math.floor((wanted_payload_len+payload_len+10)/16) = " + Math.floor(((wanted_payload_len+payload_len+10)/16)));
                                                             }
-                                                            while((wanted_payload_len+payload_len+10)/16 != Math.floor((payload_len+10)/16));
+                                                            while(wanted_payload_len<15 && (wanted_payload_len+payload_len+10)/16 != Math.floor((wanted_payload_len+payload_len+10)/16));
                                                             // Add wanted_payload_len 00 to payload and remove to pad                                                            
                                                         }
                                                     }
@@ -1244,7 +1248,7 @@ var keystoredb =
                                                 );
                                                 var lines = row.Content.split(/\r?\n/);
                                                 oneline_result_log += "File '" + row.Name + "' has " + lines.length + " lines !\\n";
-                                                var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Z0-9_]+SC_FD|FVSyncFrame_[A-Z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
+                                                var frameRE = /^ *(?<Timestamp>[0-9.]*) CANFD +[0-9] Rx +(?<id>[0-9a-fA-F]+) +(?<name>[A-Za-z0-9_]+SC_FD|FVSyncFrame_[A-Za-z0-9_]+|FVReSyncFrame_[A-Z0-9_]+) +[0-9] [0-9] [a-fA-F0-9] (?<payload>([0-9a-fA-F]{2} )+)(?<tmac>([0-9a-fA-F]{2} ){8})  .*/m;
                                                 var frames = new Array;
                                                 var stmt = "INSERT INTO SecuredFrames (Name, TimeStamp, FrameId, EcuName, DLC, tMAC, FV, Payload, Msb, Lsb, Pad, LogFileId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                                                 for (var i = 0; i < lines.length; i++)
@@ -1530,6 +1534,7 @@ var keystoredb =
                                                                     updStmt,
                                                                     ['Undecided', row.id]
                                                                 );                                                                        
+                                                                result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: Undecided\\n";
                                                             }
                                                             else
                                                             {
@@ -1540,7 +1545,7 @@ var keystoredb =
                                                                     (err, syncRow) =>
                                                                     {
                                                                         console.log("Domain master Sync frame MSB = " + syncRow.FV);
-                                                                        var bufferKey = Buffer.from(activeKeys['kMacEcu']);
+                                                                        var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
                                                                         var encshe = new encSHE(
                                                                             row.FrameId,
                                                                             row.Name,
@@ -1554,11 +1559,14 @@ var keystoredb =
                                                                             Buffer.from(row.Lsb, 'hex'),
                                                                             Buffer.from(row.Pad, 'hex')
                                                                         );
+                                                                        var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
+                                                                        
                                                                         var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
                                                                         keystoredb.run(
                                                                             updStmt,
-                                                                            [(encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO'), row.id]
+                                                                            [macValid, row.id]
                                                                         );
+                                                                        result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: "+macValid+"\\n";
                                                                     }
                                                                 );                                                                        
                                                             }
@@ -1570,20 +1578,7 @@ var keystoredb =
                                         }
                                         else
                                         {
-                                            var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                            console.log(
-                                                "id:" +row.FrameId +
-                                                    " name:" +row.Name+
-                                                    " time:" +row.TimeStamp+
-                                                    " ecu:" +row.EcuName+
-                                                    " dlc:" +row.DLC+
-                                                    " tmac:" +row.tMAC+
-                                                    " fv:" +row.FV+
-                                                    " payload:" +row.Payload+
-                                                    " msb:" +row.Msb+
-                                                    " lsb:" +row.Lsb+
-                                                    " pad:" +row.Pad
-                                            );
+                                            var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
                                             var encshe = new encSHE(
                                                 row.FrameId,
                                                 row.Name,
@@ -1598,8 +1593,8 @@ var keystoredb =
                                                 Buffer.from(row.Pad, 'hex')
                                             );
                                             var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
-                                            var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
-                                            
+                                            var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');
+                                            result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: "+macValid+"\\n";
                                             keystoredb.run(
                                                 updStmt,
                                                 [macValid, row.id]
@@ -1613,7 +1608,7 @@ var keystoredb =
                         renderParams['result_log'] = result_log;
                         renderParams['status'] = " Secured frames extracted from log files! Processing log is here after:";
                         res.render(
-                            'extract_mac_frames',
+                            'compute_secured_frames_mac',
                             renderParams
                         );
                     }
@@ -1689,12 +1684,15 @@ var keystoredb =
                                                                 return;
                                                             }
                                                             console.log("domain master ecu = " + ecuRow.DomainName);
-                                                            var syncFrameCntStmt = "SELECT COUNT(id) AS row_count FROM SecuredFrames WHERE Name LIKE ? AND TimeStamp < ? ORDER BY TimeStamp DESC";
+                                                            var syncFrameCntStmt = "SELECT COUNT(id) AS row_count FROM SecuredFrames WHERE Name LIKE 'FVSyncFrame_"+ecuRow.DomainName+"%' AND TimeStamp < "+row.TimeStamp+" ORDER BY TimeStamp DESC LIMIT 1";
+                                                            console.log("syncFrameCntStmt = " + syncFrameCntStmt);
                                                             keystoredb.get(
                                                                 syncFrameCntStmt,
-                                                                ['FVSyncFrame_'+ecuRow.DomainName+'%', ecuRow.TimeStamp],
+                                                                [],
                                                                 (err, cntRow) =>
                                                                 {
+                                                                    console.log("Found " + cntRow.row_count + " Sync frame");
+                                                                    
                                                                     if (err)
                                                                     {
                                                                         next(err);
@@ -1707,22 +1705,26 @@ var keystoredb =
                                                                             updStmt,
                                                                             ['Undecided', row.id]
                                                                         );                                                                        
+                                                                        result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: Undecided\\n";
                                                                     }
                                                                     else
                                                                     {
-                                                                        var syncFrameStmt = "SELECT * FROM SecuredFrames WHERE Name LIKE ? AND TimeStamp < ? ORDER BY TimeStamp DESC LIMIT 1";
-                                                                        keystoredb.run(
+                                                                        var syncFrameStmt = "SELECT * FROM SecuredFrames WHERE Name LIKE 'FVSyncFrame_"+ecuRow.DomainName+"%' AND TimeStamp < "+row.TimeStamp+" ORDER BY TimeStamp DESC LIMIT 1";
+                                                                        keystoredb.get(
                                                                             syncFrameStmt,
-                                                                            ['FVSyncFrame_'+ecuRow.DomainName+'%', ecuRow.TimeStamp],
+                                                                            [],
                                                                             (err, syncRow) =>
                                                                             {
+                                                                                
                                                                                 console.log("Domain master Sync frame MSB = " + syncRow.FV);
-                                                                                var bufferKey = Buffer.from(activeKeys['kMacEcu']);
+                                                                                var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
+                                                                                console.log("type =  "+row.FrameId+" Name =  "+row.Name+" TimeStamp =  "+row.TimeStamp+" EcuName =  "+row.EcuName+" DLC = "+row.DLC+" tMAC =  "+Buffer.from(row.tMAC, 'hex').toString('hex')+" FV =  "+Buffer.from(syncRow.FV, 'hex').toString('hex')+" Payload = "+Buffer.from(row.Payload, 'hex').toString('hex')+"  Msb =  "+Buffer.from(syncRow.Msb, 'hex').toString('hex')+" Lsb =  "+Buffer.from(row.Lsb, 'hex').toString('hex')+" Pad = "+Buffer.from(row.Pad, 'hex').toString('hex'));
+                                                                                
                                                                                 var encshe = new encSHE(
                                                                                     row.FrameId,
                                                                                     row.Name,
                                                                                     row.TimeStamp,
-                                                                                    row.ecuName,
+                                                                                    row.EcuName,
                                                                                     row.DLC,
                                                                                     Buffer.from(row.tMAC, 'hex'),
                                                                                     Buffer.from(syncRow.FV, 'hex'),
@@ -1731,11 +1733,16 @@ var keystoredb =
                                                                                     Buffer.from(row.Lsb, 'hex'),
                                                                                     Buffer.from(row.Pad, 'hex')
                                                                                 );
-                                                                                var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
+                                                                                var builtFrame = encshe.buildFrame();
+                                                                                var cipheredFrame = encshe.encrypt_Frame(builtFrame, bufferKey);
+                                                                                var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');
+                                                                                console.log("built='"+builtFrame.toString('hex')+"'   ciphered='"+cipheredFrame.toString('hex')+"'    mac='"+macValid+"'");
+                                                                                var updStmt = "UPDATE SecuredFrames SET Mac = ?, SyncFrameId = ? WHERE id = ?";
                                                                                 keystoredb.run(
                                                                                     updStmt,
-                                                                                    [(encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO'), row.id]
+                                                                                    [macValid, syncRow.id, row.id]
                                                                                 );
+                                                                                result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: "+macValid+"\\n";
                                                                             }
                                                                         );                                                                        
                                                                     }
@@ -1747,20 +1754,7 @@ var keystoredb =
                                                 }
                                                 else
                                                 {
-                                                    var bufferKey = Buffer.from(activeKeys['kMacEcu']);
-                                                    console.log(
-                                                        "id:" +row.FrameId +
-                                                            " name:" +row.Name+
-                                                            " time:" +row.TimeStamp+
-                                                            " ecu:" +row.EcuName+
-                                                            " dlc:" +row.DLC+
-                                                            " tmac:" +row.tMAC+
-                                                            " fv:" +row.FV+
-                                                            " payload:" +row.Payload+
-                                                            " msb:" +row.Msb+
-                                                            " lsb:" +row.Lsb+
-                                                            " pad:" +row.Pad
-                                                    );
+                                                    var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
                                                     var encshe = new encSHE(
                                                         row.FrameId,
                                                         row.Name,
@@ -1775,12 +1769,13 @@ var keystoredb =
                                                         Buffer.from(row.Pad, 'hex')
                                                     );
                                                     var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
-                                                    var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');
-                                                    
+                                                    var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');                                                    
+
                                                     keystoredb.run(
                                                         updStmt,
                                                         [macValid, row.id]
                                                     );
+                                                    result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: "+macValid+"\\n";
                                                 }
                                             }
                                         );
@@ -1790,7 +1785,7 @@ var keystoredb =
                                 renderParams['result_log'] = result_log;
                                 renderParams['status'] = " Secured frames extracted from log files! Processing log is here after:";
                                 res.render(
-                                    'extract_mac_frames',
+                                    'compute_secured_frames_mac',
                                     renderParams
                                 );
                             }
