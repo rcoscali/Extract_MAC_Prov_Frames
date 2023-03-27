@@ -1802,17 +1802,18 @@ var keystoredb =
                 /* GET /list_secured_frames/:page                                                                                                  */
                 /* ========================================================================================================================= */
                 router.get(
-                    '/list_secured_frames/:page',
+                    '/list_secured_frames/:logFileId/:page',
                     (req, res, next) =>
                     {
+                        var logFileId = Number.parseInt(req.params['logFileId']);
                         var result_log = "";
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
-                        var page = (req.params['page'] !== undefined ? Number.parseInt(req.params['page']) : 1);
+                        var page = (req.params['page'] !== undefined || req.params['page'] == 0 ? Number.parseInt(req.params['page']) : 1);
                         var renderParams;
 
-                        console.log("*** GET /list_secured_frames/:page (= "+page+")");
+                        console.log("*** GET /list_secured_frames/:logFileId/:page (/= "+logFileid+" /= "+page+")");
                         keystoredb.get(
                             "SELECT MacEcu, MasterEcu FROM ActiveKeys",
                             (err, key) =>
@@ -1838,10 +1839,10 @@ var keystoredb =
                                         activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                         accordionTab: 2
                                     };
-                                countScfdStmt = "SELECT COUNT(id) AS row_count FROM SecuredFrames";
+                                countScfdStmt = "SELECT COUNT(id) AS row_count FROM SecuredFrames WHERE LogFileId = ?";
                                 keystoredb.get(
                                     countScfdStmt,
-                                    [],
+                                    [logFileId],
                                     (err, countRow) =>
                                     {
                                         var number_of_pages = Math.floor(countRow.row_count / 20);
@@ -1855,10 +1856,10 @@ var keystoredb =
                                         renderParams['prevPage'] = cur_page_less_1;
                                         renderParams['nextPage'] = cur_page_plus_1;
                                         
-                                        scfdStmt = "SELECT * FROM SecuredFrames LIMIT 20 OFFSET ?";
+                                        scfdStmt = "SELECT * FROM SecuredFrames WHERE LogFileId = ? LIMIT 20 OFFSET ?";
                                         keystoredb.all(
                                             scfdStmt,
-                                            [(cur_page -1) * 20 > 0 ? ((cur_page -1) * 20) : 0],
+                                            [logFileId, (cur_page -1) * 20 > 0 ? ((cur_page -1) * 20) : 0],
                                             (err, rows) =>
                                             {
                                                 if (err)
