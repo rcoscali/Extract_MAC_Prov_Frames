@@ -1459,7 +1459,7 @@ var keystoredb =
                         var activeKeys = new Object;
                         var k_mac_ecu = "Not Set !";
                         var k_master_ecu = "Not Set !";
-                        var renderParams;
+                        var renderParams = new Object;
                         
                         keystoredb.get(
                             "SELECT MacEcu, MasterEcu FROM ActiveKeys",
