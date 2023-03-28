@@ -12,7 +12,7 @@ const {exec} = require("child_process");
 const form = formidable({uploadDir: os.tmpdir()});
 var AesCmac = require('node-aes-cmac').aesCmac;
 const decSHE = require('she_decrypt');
-const encSHE = require('she_encrypt');
+const encMAC = require('mac_encrypt');
 var app = require('../app');
 
 const DbLogPath = process.env.MAC_PROV_ROOT + '/var/log';
@@ -912,9 +912,9 @@ var keystoredb =
                                 activeKeys['kMasterEcu'] = k_master_ecu;
 
                                 var stmt = "SELECT DISTINCT f.id, l.Name, f.Frame, f.SHECmdExtracted \
-                                                    FROM LogFiles l \
-                                                                  LEFT JOIN MACProvFrames f ON l.id = f.LogFileId \
-                                                    WHERE length(f.Frame) > 0";
+                                                   FROM LogFiles l \
+                                                   LEFT JOIN MACProvFrames f ON l.id = f.LogFileId \
+                                                   WHERE length(f.Frame) > 0";
                                 keystoredb.all(
                                     stmt,
                                     [],
@@ -1546,7 +1546,7 @@ var keystoredb =
                                                                     {
                                                                         console.log("Domain master Sync frame MSB = " + syncRow.FV);
                                                                         var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
-                                                                        var encshe = new encSHE(
+                                                                        var encmac = new encMAC(
                                                                             row.FrameId,
                                                                             row.Name,
                                                                             row.TimeStamp,
@@ -1559,7 +1559,7 @@ var keystoredb =
                                                                             Buffer.from(row.Lsb, 'hex'),
                                                                             Buffer.from(row.Pad, 'hex')
                                                                         );
-                                                                        var macValid = (encshe.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
+                                                                        var macValid = (encmac.verifyMac(bufferKey, row.tMAC) ? 'Valid' : 'KO');
                                                                         
                                                                         var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
                                                                         keystoredb.run(
@@ -1579,7 +1579,7 @@ var keystoredb =
                                         else
                                         {
                                             var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
-                                            var encshe = new encSHE(
+                                            var encmac = new encMAC(
                                                 row.FrameId,
                                                 row.Name,
                                                 row.TimeStamp,
@@ -1593,7 +1593,7 @@ var keystoredb =
                                                 Buffer.from(row.Pad, 'hex')
                                             );
                                             var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
-                                            var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');
+                                            var macValid = (encmac.verifyMac(bufferKey) ? 'Valid' : 'KO');
                                             result_log += "Frame '"+row.Name+"' at "+row.TimeStamp+"MAC tag is: "+macValid+"\\n";
                                             keystoredb.run(
                                                 updStmt,
@@ -1720,7 +1720,7 @@ var keystoredb =
                                                                                 var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
                                                                                 console.log("type =  "+row.FrameId+" Name =  "+row.Name+" TimeStamp =  "+row.TimeStamp+" EcuName =  "+row.EcuName+" DLC = "+row.DLC+" tMAC =  "+Buffer.from(row.tMAC, 'hex').toString('hex')+" FV =  "+Buffer.from(syncRow.FV, 'hex').toString('hex')+" Payload = "+Buffer.from(row.Payload, 'hex').toString('hex')+"  Msb =  "+Buffer.from(syncRow.Msb, 'hex').toString('hex')+" Lsb =  "+Buffer.from(row.Lsb, 'hex').toString('hex')+" Pad = "+Buffer.from(row.Pad, 'hex').toString('hex'));
                                                                                 
-                                                                                var encshe = new encSHE(
+                                                                                var encmac = new encMAC(
                                                                                     row.FrameId,
                                                                                     row.Name,
                                                                                     row.TimeStamp,
@@ -1733,9 +1733,9 @@ var keystoredb =
                                                                                     Buffer.from(row.Lsb, 'hex'),
                                                                                     Buffer.from(row.Pad, 'hex')
                                                                                 );
-                                                                                var builtFrame = encshe.buildFrame();
-                                                                                var cipheredFrame = encshe.encrypt_Frame(builtFrame, bufferKey);
-                                                                                var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');
+                                                                                var builtFrame = encmac.buildFrame();
+                                                                                var cipheredFrame = encmac.encrypt_Frame(builtFrame, bufferKey);
+                                                                                var macValid = (encmac.verifyMac(bufferKey) ? 'Valid' : 'KO');
                                                                                 console.log("built='"+builtFrame.toString('hex')+"'   ciphered='"+cipheredFrame.toString('hex')+"'    mac='"+macValid+"'");
                                                                                 var updStmt = "UPDATE SecuredFrames SET Mac = ?, SyncFrameId = ? WHERE id = ?";
                                                                                 keystoredb.run(
@@ -1755,7 +1755,7 @@ var keystoredb =
                                                 else
                                                 {
                                                     var bufferKey = Buffer.from(activeKeys['kMacEcu'], 'hex');
-                                                    var encshe = new encSHE(
+                                                    var encmac = new encMAC(
                                                         row.FrameId,
                                                         row.Name,
                                                         row.TimeStamp,
@@ -1769,7 +1769,7 @@ var keystoredb =
                                                         Buffer.from(row.Pad, 'hex')
                                                     );
                                                     var updStmt = "UPDATE SecuredFrames SET Mac = ? WHERE id = ?";
-                                                    var macValid = (encshe.verifyMac(bufferKey) ? 'Valid' : 'KO');                                                    
+                                                    var macValid = (encmac.verifyMac(bufferKey) ? 'Valid' : 'KO');                                                    
 
                                                     keystoredb.run(
                                                         updStmt,
@@ -2068,7 +2068,7 @@ var keystoredb =
                                     {
                                         var SHE_m2 = row.Frame.substring(32, 64);
                                         var bufferM2 = Buffer.from(SHE_m2);
-                                        var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
+                                        var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu'],'hex');
 
                                         var bufM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
                                         var cid = "0x" + she.getCID(bufM2);
@@ -2155,7 +2155,7 @@ var keystoredb =
                                             {
                                                 var SHE_m2 = row.Frame.substring(32, 64);
                                                 var bufferM2 = Buffer.from(SHE_m2);
-                                                var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
+                                                var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu'], 'hex');
                                                 var bufM2 = she.decrypt_M2(bufferM2, bufferKMasterEcu);
                                                 var cid = "0x" + she.getCID(bufM2);
                                                 var fid = "0x" + she.getFID(bufM2);
@@ -2274,7 +2274,7 @@ var keystoredb =
                  */
 
                 /* ========================================================================================================================= */
-                /* GET /unwrap_mac_keys/:frameId                                                                                             */
+                /* GET /unwrap_mac_keys_from_frame/:frameId                                                                                  */
                 /* ========================================================================================================================= */
                 router.get(
                     '/unwrap_mac_keys_from_frame/:frameId',
@@ -2299,8 +2299,8 @@ var keystoredb =
                                 // 
                                 // Unwrap key from frame
                                 //
-                                //var kMacEcu = "00000000000000000000000000000011";
-                                //var kMasterEcu = "0153F7000099ED9F320451AA8A7D9707";
+                                //var kMacEcu =          "10357f020289ad8f512662ba988f1111";
+                                //var kMasterEcu =       "0153F7000099ED9F320451AA8A7D9707";
                                 //var key_update_enc_c = "010153484500800000000000000000B0";
                                 var frameIdParam = Number.parseInt(req.params['frameId']);
                                 var renderParams = 
@@ -2324,8 +2324,8 @@ var keystoredb =
                                         else
                                         {
                                             var she = new decSHE();
-                                            var bufferFrame = Buffer.from(row.Frame);
-                                            var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu']);
+                                            var bufferFrame = Buffer.from(row.Frame, 'hex');
+                                            var bufferKMasterEcu = Buffer.from(activeKeys['kMasterEcu'], 'hex');
 
                                             var bufM2 = she.decrypt_M2(bufferFrame, bufferKMasterEcu);
                                             var cid = "0x" + she.getCID(bufM2);
