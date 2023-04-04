@@ -1,20 +1,24 @@
-var os = require('os');
-var express = require('express');
-var router = express.Router();
-var mime = require('mime');
-var reader = require ("buffered-reader");
-var formidable = require('formidable');
-var path = require('path');
-var fs = require('fs');
+/**
+ * index.js
+ */
+const os = require('os');
+const express = require('express');
+const router = express.Router();
+const mime = require('mime');
+const reader = require ("buffered-reader");
+const formidable = require('formidable');
+const path = require('path');
+const fs = require('fs');
 const bodyParser = require("body-parser");
 const sqlite3 = require('sqlite3').verbose();
 const {exec} = require("child_process");
 const form = formidable({uploadDir: os.tmpdir()});
-var AesCmac = require('node-aes-cmac').aesCmac;
+const AesCmac = require('node-aes-cmac').aesCmac;
 const decSHE = require('she_decrypt');
 const encMAC = require('mac_encrypt');
 var app = require('../app');
 
+// Constants for PATH (relative to $MAV_PROV_ROOT)
 const DbLogPath = process.env.MAC_PROV_ROOT + '/var/log';
 const DbDirPath = process.env.MAC_PROV_ROOT + '/var/lib';
 const DbFilePath = DbDirPath + '/keystore.db';
@@ -85,7 +89,7 @@ var keystoredb =
                 );
                 
                 /* ========================================================================================================================= */
-                /* GET home page. */
+                /* GET /favicon.ico                                                                                                          */
                 /* ========================================================================================================================= */
                 router.get(
                     '/favicon.ico',
@@ -336,8 +340,7 @@ var keystoredb =
                                 }
                                 activeKeys['kMacEcu'] = k_mac_ecu;
                                 activeKeys['kMasterEcu'] = k_master_ecu;
-                                var stmt = "SELECT id, Name, LogDate, ImportDate, Version, Size, LinesNb, " +
-                                    "UUID, FramesExtracted, SecuredFramesExtracted FROM LogFiles";
+                                var stmt = "SELECT id, Name, LogDate, ImportDate, Version, Size, UUID, ProvFramesExtracted, SecuredFramesExtracted FROM LogFiles";
                                 keystoredb.all(
                                     stmt,
                                     [],
@@ -374,7 +377,7 @@ var keystoredb =
                                                     "Size:"+row.Size+","+
                                                     "LinesNb:"+row.LinesNb+","+
                                                     "UUID:'"+row.UUID+"',"+
-                                                    "FramesExtracted:"+(row.FramesExtracted ? "true" : "false")+","+
+                                                    "ProvFramesExtracted:"+(row.ProvFramesExtracted ? "true" : "false")+","+
                                                     "SecuredFramesExtracted:"+(row.SecuredFramesExtracted ? "true" : "false")+"}"+(lastRow ? "]" : ",");
                                                 index++;
                                             }
@@ -406,6 +409,12 @@ var keystoredb =
                             "SELECT MacEcu, MasterEcu FROM ActiveKeys",
                             (err, key) =>
                             {
+                                if (err)
+                                {
+                                    console.trace("Error on statement: SELECT MacEcu, MasterEcu FROM ActiveKeys");
+                                    next(err.status || 500);
+                                    return;
+                                }
                                 if (key != undefined)
                                 {
                                     k_mac_ecu = key.MacEcu;
@@ -423,6 +432,7 @@ var keystoredb =
                                     {
                                         if (err)
                                         {
+                                            console.trace("Error while reading directory '" + DbLogPath + "'");
                                             next(err.status || 500);
                                             return;
                                         }
@@ -435,6 +445,7 @@ var keystoredb =
                                                 {
                                                     if (err)
                                                     {
+                                                        console.trace("Error while unlinking file '" + path.join(DbLogPath, file) + "'");
                                                         next(err.status || 500);
                                                         return;
                                                     }
@@ -1390,6 +1401,7 @@ var keystoredb =
                         );
                     }
                 );
+                
                 /* ========================================================================================================================= */
                 /* GET /compute_secured_frames_mac_by_id                                                                                     */
                 /* ========================================================================================================================= */
@@ -2106,7 +2118,7 @@ var keystoredb =
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 content: '1 frame processed !',
                                                 sheArgsTbl: contentHtml,
-                                                accordionTab: 2
+                                                accordionTab: 3
                                             }
                                         );
                                     }
@@ -2197,7 +2209,7 @@ var keystoredb =
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 content: rows.length + ' frames processed',
                                                 sheArgsTbl: contentHtml,
-                                                accordionTab: 2
+                                                accordionTab: 3
                                             }
                                         );
                                     }
@@ -2255,7 +2267,7 @@ var keystoredb =
                                                 help: 'Table listing all SHE commands args stored in DB',
                                                 activeKeys: "{kMacEcu:'"+activeKeys['kMacEcu']+"',kMasterEcu:'"+activeKeys['kMasterEcu']+"'}",
                                                 sheArgsTbl: '[' + contentHtml + ']',
-                                                accordionTab: 2
+                                                accordionTab: 3
                                             }
                                         );
                                     }
@@ -2418,7 +2430,7 @@ var keystoredb =
                                         var fid = "0x" + she.getFID(bufM2);
                                         var key = "0x" + she.getKEY(bufM2).toString('hex');
 
-                                        renderParams['m2'] = "'" + bufM2 + "'";
+                                        renderParams['m2'] = "'" + bufM2.toString('hex') + "'";
                                         renderParams['cid'] = "'" + cid + "'";
                                         renderParams['fid'] = "'" + fid + "'";
                                         renderParams['key'] = "'" + key + "'";

@@ -26,7 +26,7 @@ block content
               | Lines Nb
             th(id="UUID", style="background-color: #000")
               | UUID
-            th(id="FramesExtracted", style="background-color: #000").
+            th(id="ProvFramesExtracted", style="background-color: #000").
               Prov
               Frames
               Extracted
@@ -60,7 +60,7 @@ block content
     | // Event handler for checkbox allowing to process provisionning frames
     | function onListProvFrame(i)
     | {
-    |    document.location.href = '/list_mac_prov_frames/' + log_files_tbl[i]['id'];
+    |    document.location.href = '/list_mac_prov_frame/' + log_files_tbl[i]['id'];
     | }
     | // Event handler for the page onload event (set from the body tag)
     | function localOnLoad()
@@ -76,7 +76,7 @@ block content
     |     // Create href attribute
     |     var href = document.createAttribute("href");
     |     // Set href value
-    |     href.value = (log_files_tbl[i]['FramesExtracted'] ? '/list_mac_prov_frame/' : '/extract_mac_frames/') + log_files_tbl[i]['id'];
+    |     href.value = (log_files_tbl[i]['ProvFramesExtracted'] ? '/list_mac_prov_frame/' : '/extract_mac_frames/') + log_files_tbl[i]['id'];
     |     link.setAttributeNode(href);
     |     link.innerHTML = log_files_tbl[i]['Name'];
     |     newCell.innerHTML = link.outerHTML;
@@ -104,7 +104,7 @@ block content
     |     var typeatttr = document.createAttribute("type");
     |     typeatttr.value = "checkbox";
     |     inputelem.setAttributeNode(typeatttr);
-    |     if (log_files_tbl[i]['FramesExtracted'])
+    |     if (log_files_tbl[i]['ProvFramesExtracted'])
     |     {
     |       var checkedattr = document.createAttribute("checked");
     |       inputelem.setAttributeNode(checkedattr);
